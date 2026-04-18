@@ -17,6 +17,9 @@
 
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
+  --result-bg: #e9f0fb;
+  --result-border: #b9c8de;
+  --result-text: #334155;
 
   --chip-bg: #f1f5f9;
   --chip-border: #dbe6f3;
@@ -51,6 +54,9 @@
 
   --input-bg: #0a1425;
   --input-border: #2a3b58;
+  --result-bg: #1c2a42;
+  --result-border: #3b5378;
+  --result-text: #cbd5e1;
 
   --chip-bg: #1a2840;
   --chip-border: #2a3b58;
@@ -618,12 +624,15 @@ html, body {
   color: var(--sub);
 }
 
-.pay-result-input,
-.pay-result-input:disabled {
-  background: color-mix(in srgb, var(--secondary-bg) 78%, white 22%);
-  border-color: color-mix(in srgb, var(--secondary-border) 78%, black 22%);
-  color: color-mix(in srgb, var(--sub) 80%, black 20%);
+.crm-input.pay-result-input,
+.crm-input.pay-result-input:disabled {
+  background: var(--result-bg) !important;
+  border-color: var(--result-border) !important;
+  color: var(--result-text) !important;
+  -webkit-text-fill-color: var(--result-text);
+  opacity: 1;
   cursor: not-allowed;
+  box-shadow: inset 0 0 0 1px var(--result-border);
 }
 
 .pay-full {
