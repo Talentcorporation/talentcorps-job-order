@@ -587,6 +587,10 @@ html, body {
   gap: 8px;
 }
 
+.pay-rates-grid-range {
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
 .pay-full {
   grid-column: 1 / -1;
 }
