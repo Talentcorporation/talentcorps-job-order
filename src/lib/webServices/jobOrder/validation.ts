@@ -92,15 +92,24 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
     const maxPay = Number(order.financial.maxPayRate || 0);
     const minBill = Number(order.financial.minBillRate || 0);
     const maxBill = Number(order.financial.maxBillRate || 0);
+    const markup = Number(order.financial.markupMultiplier || 0);
 
     if (minPay <= 0) issues.push({ field: "financial.minPayRate", message: "Minimum pay rate is required for pay range.", severity: "error" });
     if (maxPay <= 0) issues.push({ field: "financial.maxPayRate", message: "Maximum pay rate is required for pay range.", severity: "error" });
-    if (minBill <= 0) issues.push({ field: "financial.minBillRate", message: "Minimum bill rate is required for pay range.", severity: "error" });
-    if (maxBill <= 0) issues.push({ field: "financial.maxBillRate", message: "Maximum bill rate is required for pay range.", severity: "error" });
+
+    if (order.financial.inputMode === "bill") {
+      if (minBill <= 0) issues.push({ field: "financial.minBillRate", message: "Minimum bill rate is required in bill-rate mode.", severity: "error" });
+      if (maxBill <= 0) issues.push({ field: "financial.maxBillRate", message: "Maximum bill rate is required in bill-rate mode.", severity: "error" });
+    }
+
+    if (order.financial.inputMode === "markup") {
+      if (markup <= 0) issues.push({ field: "financial.markupMultiplier", message: "Markup multiplier is required in markup mode.", severity: "error" });
+    }
+
     if (minPay > 0 && maxPay > 0 && minPay > maxPay) {
       issues.push({ field: "financial.maxPayRate", message: "Maximum pay rate must be greater than or equal to minimum pay rate.", severity: "error" });
     }
-    if (minBill > 0 && maxBill > 0 && minBill > maxBill) {
+    if (order.financial.inputMode === "bill" && minBill > 0 && maxBill > 0 && minBill > maxBill) {
       issues.push({ field: "financial.maxBillRate", message: "Maximum bill rate must be greater than or equal to minimum bill rate.", severity: "error" });
     }
   }

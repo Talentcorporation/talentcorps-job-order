@@ -1611,7 +1611,7 @@ export function JobOrderFormWizard(props: {
                     },
                   }))}
                 >
-                  Single Pay Rate
+                  Single Pay
                 </button>
                 <button
                   type="button"
@@ -1643,38 +1643,83 @@ export function JobOrderFormWizard(props: {
                   Multiple Pay Rates
                 </button>
               </div>
-              <div className="pay-mode-toggle">
+              <div className="pay-mode-toggle" style={{ padding: 8, borderRadius: 10, border: `1px solid ${activeTheme.uiBorder}`, background: activeTheme.uiSoft }}>
                 <button
                   type="button"
                   className={order.financial.inputMode === "bill" ? "crm-btn-primary" : "crm-btn-secondary"}
                   style={order.financial.inputMode === "bill" ? { background: activeTheme.uiStepActive } : undefined}
                   onClick={() => updateOrder((p) => {
-                    const nextPay = Number(p.financial.payRate || 0);
-                    const nextBill = Number(p.financial.billRate || 0);
-                    const derivedMarkup = nextPay > 0 && nextBill > 0 ? Number((nextBill / nextPay).toFixed(4)) : p.financial.markupMultiplier;
+                    let derivedMarkup = p.financial.markupMultiplier;
+                    if (p.financial.payStructure === "single") {
+                      const nextPay = Number(p.financial.payRate || 0);
+                      const nextBill = Number(p.financial.billRate || 0);
+                      derivedMarkup = nextPay > 0 && nextBill > 0 ? Number((nextBill / nextPay).toFixed(4)) : p.financial.markupMultiplier;
+                    }
+                    if (p.financial.payStructure === "range") {
+                      const minPay = Number(p.financial.minPayRate || 0);
+                      const minBill = Number(p.financial.minBillRate || 0);
+                      derivedMarkup = minPay > 0 && minBill > 0 ? Number((minBill / minPay).toFixed(4)) : p.financial.markupMultiplier;
+                    }
+                    if (p.financial.payStructure === "multiple") {
+                      const normalized = p.financial.variableRates.map((rate) => {
+                        const pay = Number(rate.payRate || 0);
+                        const bill = Number(rate.billRate || 0);
+                        const nextMarkup = pay > 0 && bill > 0 ? Number((bill / pay).toFixed(4)) : rate.markupMultiplier;
+                        return { ...rate, markupMultiplier: nextMarkup };
+                      });
+                      return {
+                        ...p,
+                        financial: { ...p.financial, inputMode: "bill", variableRates: normalized, markupMultiplier: derivedMarkup },
+                      };
+                    }
                     return {
                       ...p,
                       financial: { ...p.financial, inputMode: "bill", markupMultiplier: derivedMarkup },
                     };
                   })}
                 >
-                  Enter Bill Rate
+                  By Bill Rate(s)
                 </button>
                 <button
                   type="button"
                   className={order.financial.inputMode === "markup" ? "crm-btn-primary" : "crm-btn-secondary"}
                   style={order.financial.inputMode === "markup" ? { background: activeTheme.uiStepActive } : undefined}
                   onClick={() => updateOrder((p) => {
-                    const nextPay = Number(p.financial.payRate || 0);
+                    let derivedBill = p.financial.billRate;
                     const nextMarkup = Number(p.financial.markupMultiplier || 0);
-                    const derivedBill = nextPay > 0 && nextMarkup > 0 ? Number((nextPay * nextMarkup).toFixed(2)) : p.financial.billRate;
+                    if (p.financial.payStructure === "single") {
+                      const nextPay = Number(p.financial.payRate || 0);
+                      derivedBill = nextPay > 0 && nextMarkup > 0 ? Number((nextPay * nextMarkup).toFixed(2)) : p.financial.billRate;
+                    }
+                    if (p.financial.payStructure === "range") {
+                      const minPay = Number(p.financial.minPayRate || 0);
+                      const maxPay = Number(p.financial.maxPayRate || 0);
+                      const minBill = minPay > 0 && nextMarkup > 0 ? Number((minPay * nextMarkup).toFixed(2)) : p.financial.minBillRate;
+                      const maxBill = maxPay > 0 && nextMarkup > 0 ? Number((maxPay * nextMarkup).toFixed(2)) : p.financial.maxBillRate;
+                      return {
+                        ...p,
+                        financial: { ...p.financial, inputMode: "markup", minBillRate: minBill, maxBillRate: maxBill },
+                      };
+                    }
+                    if (p.financial.payStructure === "multiple") {
+                      const normalized = p.financial.variableRates.map((rate) => {
+                        const pay = Number(rate.payRate || 0);
+                        const markup = Number(rate.markupMultiplier || 0);
+                        const nextBill = pay > 0 && markup > 0 ? Number((pay * markup).toFixed(2)) : rate.billRate;
+                        return { ...rate, billRate: nextBill };
+                      });
+                      return {
+                        ...p,
+                        financial: { ...p.financial, inputMode: "markup", variableRates: normalized },
+                      };
+                    }
                     return {
                       ...p,
                       financial: { ...p.financial, inputMode: "markup", billRate: derivedBill },
                     };
                   })}
                 >
-                  Enter Markup
+                  By Markup
                 </button>
               </div>
               <p className="crm-muted" style={{ marginTop: 8, marginBottom: 0 }}>
@@ -1683,7 +1728,9 @@ export function JobOrderFormWizard(props: {
                     ? "Bill-rate mode: enter pay + bill, markup auto-calculates."
                     : "Markup mode: enter pay + markup, bill auto-calculates."
                   : order.financial.payStructure === "range"
-                    ? "Range mode: enter minimum and maximum pay/bill values."
+                    ? order.financial.inputMode === "bill"
+                      ? "Range mode (Bill): enter minimum and maximum pay + bill rates."
+                      : "Range mode (Markup): enter pay range + markup, bill range auto-calculates."
                     : "Multiple mode: add each pay option with its own pay/bill/markup."}
               </p>
             </div>
@@ -1762,10 +1809,33 @@ export function JobOrderFormWizard(props: {
 
               {order.financial.payStructure === "range" ? (
                 <div className="pay-rates-grid">
-                  <input data-field="financial.minPayRate" className="crm-input" type="number" step="0.01" placeholder="Min Pay Rate" value={order.financial.minPayRate ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, minPayRate: Number(e.target.value || 0) || undefined } }))} />
-                  <input data-field="financial.maxPayRate" className="crm-input" type="number" step="0.01" placeholder="Max Pay Rate" value={order.financial.maxPayRate ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, maxPayRate: Number(e.target.value || 0) || undefined } }))} />
-                  <input data-field="financial.minBillRate" className="crm-input" type="number" step="0.01" placeholder="Min Bill Rate" value={order.financial.minBillRate ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, minBillRate: Number(e.target.value || 0) || undefined } }))} />
-                  <input data-field="financial.maxBillRate" className="crm-input" type="number" step="0.01" placeholder="Max Bill Rate" value={order.financial.maxBillRate ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, maxBillRate: Number(e.target.value || 0) || undefined } }))} />
+                  <input data-field="financial.minPayRate" className="crm-input" type="number" step="0.01" placeholder="Min Pay Rate" value={order.financial.minPayRate ?? ""} onChange={(e) => updateOrder((p) => {
+                    const minPay = Number(e.target.value || 0) || undefined;
+                    const markupValue = Number(p.financial.markupMultiplier || 0);
+                    const minBill = p.financial.inputMode === "markup" && minPay && markupValue > 0 ? Number((minPay * markupValue).toFixed(2)) : p.financial.minBillRate;
+                    return { ...p, financial: { ...p.financial, minPayRate: minPay, minBillRate: minBill } };
+                  })} />
+                  <input data-field="financial.maxPayRate" className="crm-input" type="number" step="0.01" placeholder="Max Pay Rate" value={order.financial.maxPayRate ?? ""} onChange={(e) => updateOrder((p) => {
+                    const maxPay = Number(e.target.value || 0) || undefined;
+                    const markupValue = Number(p.financial.markupMultiplier || 0);
+                    const maxBill = p.financial.inputMode === "markup" && maxPay && markupValue > 0 ? Number((maxPay * markupValue).toFixed(2)) : p.financial.maxBillRate;
+                    return { ...p, financial: { ...p.financial, maxPayRate: maxPay, maxBillRate: maxBill } };
+                  })} />
+                  <input data-field="financial.minBillRate" className="crm-input" type="number" step="0.01" placeholder="Min Bill Rate" value={order.financial.inputMode === "markup" ? (order.financial.minPayRate && Number(order.financial.markupMultiplier || 0) > 0 ? Number(order.financial.minPayRate * Number(order.financial.markupMultiplier || 0)).toFixed(2) : "") : (order.financial.minBillRate ?? "")} disabled={order.financial.inputMode === "markup"} onChange={(e) => updateOrder((p) => {
+                    const minBill = Number(e.target.value || 0) || undefined;
+                    const minPay = Number(p.financial.minPayRate || 0);
+                    const nextMarkup = minPay > 0 && minBill ? Number((minBill / minPay).toFixed(4)) : p.financial.markupMultiplier;
+                    return { ...p, financial: { ...p.financial, minBillRate: minBill, markupMultiplier: nextMarkup } };
+                  })} />
+                  <input data-field="financial.maxBillRate" className="crm-input" type="number" step="0.01" placeholder="Max Bill Rate" value={order.financial.inputMode === "markup" ? (order.financial.maxPayRate && Number(order.financial.markupMultiplier || 0) > 0 ? Number(order.financial.maxPayRate * Number(order.financial.markupMultiplier || 0)).toFixed(2) : "") : (order.financial.maxBillRate ?? "")} disabled={order.financial.inputMode === "markup"} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, maxBillRate: Number(e.target.value || 0) || undefined } }))} />
+                  <input data-field="financial.markupMultiplier" className="crm-input" type="number" step="0.01" placeholder="Markup / Multiplier" value={order.financial.markupMultiplier ?? ""} disabled={order.financial.inputMode === "bill"} onChange={(e) => updateOrder((p) => {
+                    const nextMarkup = Number(e.target.value || 0) || undefined;
+                    const minPay = Number(p.financial.minPayRate || 0);
+                    const maxPay = Number(p.financial.maxPayRate || 0);
+                    const minBill = minPay > 0 && (nextMarkup || 0) > 0 ? Number((minPay * Number(nextMarkup)).toFixed(2)) : p.financial.minBillRate;
+                    const maxBill = maxPay > 0 && (nextMarkup || 0) > 0 ? Number((maxPay * Number(nextMarkup)).toFixed(2)) : p.financial.maxBillRate;
+                    return { ...p, financial: { ...p.financial, markupMultiplier: nextMarkup, minBillRate: minBill, maxBillRate: maxBill } };
+                  })} />
                   <input className="crm-input pay-full" placeholder="PO #" value={order.financial.poNumber || ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, poNumber: e.target.value } }))} />
                 </div>
               ) : null}
