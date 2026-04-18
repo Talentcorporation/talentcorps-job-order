@@ -61,7 +61,7 @@ function stepForField(field: string): number {
   if (field.startsWith("client") || field.startsWith("project") || field.startsWith("jobSite")) return 0;
   if (field.startsWith("contacts")) return 1;
   if (field.startsWith("labor")) return 2;
-  if (field.startsWith("financial") || field.startsWith("perDiem") || field.startsWith("travelPay") || field.startsWith("internal")) return 3;
+  if (field.startsWith("financial") || field.startsWith("perDiem") || field.startsWith("travelPay") || field.startsWith("otherCompensation") || field.startsWith("internal")) return 3;
   if (field.startsWith("onboarding") || field.startsWith("compliance")) return 4;
   return 5;
 }
@@ -941,7 +941,8 @@ export function JobOrderFormWizard(props: {
     }
     financialRows.push(
       ["Per Diem", nextOrder.perDiem.enabled ? `Yes ($${nextOrder.perDiem.amount || 0})` : "No"],
-      ["Travel Pay", nextOrder.travelPay.enabled ? `Yes ($${nextOrder.travelPay.amount || 0})` : "No"]
+      ["Travel Pay", nextOrder.travelPay.enabled ? `Yes ($${nextOrder.travelPay.amount || 0})` : "No"],
+      ["Other", nextOrder.otherCompensation.enabled ? fit(nextOrder.otherCompensation.details || "Yes") : "No"]
     );
     drawSection("Rates & Conditions", financialRows);
 
@@ -2064,6 +2065,15 @@ export function JobOrderFormWizard(props: {
                   <div className="pay-rates-grid" style={{ marginTop: 8 }}>
                     <input data-field="travelPay.amount" className="crm-input" type="number" step="0.01" placeholder="Travel Pay Amount" value={order.travelPay.amount ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, travelPay: { ...p.travelPay, amount: Number(e.target.value || 0) || null } }))} />
                     <input className="crm-input" placeholder="Travel Pay Details" value={order.travelPay.details || ""} onChange={(e) => updateOrder((p) => ({ ...p, travelPay: { ...p.travelPay, details: e.target.value } }))} />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="crm-card" style={{ marginTop: 8, padding: 10 }}>
+                <label className="crm-row" style={{ gap: 8 }}><input type="checkbox" checked={order.otherCompensation.enabled} onChange={(e) => updateOrder((p) => ({ ...p, otherCompensation: { ...p.otherCompensation, enabled: e.target.checked } }))} /> Other Applies</label>
+                {order.otherCompensation.enabled ? (
+                  <div className="pay-rates-grid" style={{ marginTop: 8 }}>
+                    <input data-field="otherCompensation.details" className="crm-input pay-full" placeholder="Include any attendance bonuses, travel, etc." value={order.otherCompensation.details || ""} onChange={(e) => updateOrder((p) => ({ ...p, otherCompensation: { ...p.otherCompensation, details: e.target.value } }))} />
                   </div>
                 ) : null}
               </div>

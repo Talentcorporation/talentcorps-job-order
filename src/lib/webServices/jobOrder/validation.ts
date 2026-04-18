@@ -149,6 +149,10 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
     issues.push({ field: "travelPay.amount", message: "Travel pay amount is required when travel pay is enabled.", severity: "error" });
   }
 
+  if (order.otherCompensation.enabled && !String(order.otherCompensation.details || "").trim()) {
+    issues.push({ field: "otherCompensation.details", message: "Add details for Other compensation when enabled.", severity: "error" });
+  }
+
   if (order.onboarding.drugScreenRequired && !order.onboarding.drugScreenType) {
     issues.push({ field: "onboarding.drugScreenType", message: "Select the required drug screen type.", severity: "error" });
   }

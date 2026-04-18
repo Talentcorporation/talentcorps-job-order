@@ -88,6 +88,7 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     });
   }
   payLines.push(`PO Number: ${order.financial.poNumber || "-"}`);
+  payLines.push(`Other Compensation: ${order.otherCompensation.enabled ? (order.otherCompensation.details || "Yes") : "No"}`);
 
   const bodyLines = [
     "Job Order Submission",

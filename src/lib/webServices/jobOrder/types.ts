@@ -99,6 +99,7 @@ export type JobOrder = {
 
   perDiem: ToggleDetail;
   travelPay: ToggleDetail;
+  otherCompensation: ToggleDetail;
 
   compliance: {
     cipWrap: {
@@ -219,6 +220,7 @@ export function createEmptyJobOrder(): JobOrder {
     },
     perDiem: { enabled: false, amount: null, days: null, details: "" },
     travelPay: { enabled: false, amount: null, details: "" },
+    otherCompensation: { enabled: false, details: "" },
     compliance: {
       cipWrap: {
         enabled: false,
