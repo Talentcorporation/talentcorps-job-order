@@ -1761,7 +1761,7 @@ export function JobOrderFormWizard(props: {
                   })} />
                   <input
                     data-field="financial.billRate"
-                    className="crm-input"
+                    className={`crm-input ${order.financial.inputMode === "markup" ? "pay-result-input" : ""}`}
                     type="number"
                     step="0.01"
                     placeholder="Bill Rate"
@@ -1783,7 +1783,7 @@ export function JobOrderFormWizard(props: {
                   />
                   <input
                     data-field="financial.markupMultiplier"
-                    className="crm-input"
+                    className={`crm-input ${order.financial.inputMode === "bill" ? "pay-result-input" : ""}`}
                     type="number"
                     step="0.01"
                     placeholder="Mark-up / Multiplier"
@@ -1832,7 +1832,7 @@ export function JobOrderFormWizard(props: {
                         </div>
                         <div className="pay-field">
                           <label className="pay-field-label">Min Markup (Result)</label>
-                          <input className="crm-input" type="number" step="0.0001" value={(() => {
+                          <input className="crm-input pay-result-input" type="number" step="0.0001" value={(() => {
                             const pay = Number(order.financial.minPayRate || 0);
                             const bill = Number(order.financial.minBillRate || 0);
                             return pay > 0 && bill > 0 ? Number((bill / pay).toFixed(4)) : "";
@@ -1860,7 +1860,7 @@ export function JobOrderFormWizard(props: {
                         </div>
                         <div className="pay-field">
                           <label className="pay-field-label">Max Markup (Result)</label>
-                          <input className="crm-input" type="number" step="0.0001" value={(() => {
+                          <input className="crm-input pay-result-input" type="number" step="0.0001" value={(() => {
                             const pay = Number(order.financial.maxPayRate || 0);
                             const bill = Number(order.financial.maxBillRate || 0);
                             return pay > 0 && bill > 0 ? Number((bill / pay).toFixed(4)) : "";
@@ -1893,7 +1893,7 @@ export function JobOrderFormWizard(props: {
                         </div>
                         <div className="pay-field">
                           <label className="pay-field-label">Min Bill Rate (Result)</label>
-                          <input className="crm-input" type="number" step="0.01" value={(() => {
+                          <input className="crm-input pay-result-input" type="number" step="0.01" value={(() => {
                             const pay = Number(order.financial.minPayRate || 0);
                             const markup = Number(order.financial.markupMultiplier || 0);
                             return pay > 0 && markup > 0 ? Number((pay * markup).toFixed(2)) : "";
@@ -1923,7 +1923,7 @@ export function JobOrderFormWizard(props: {
                         </div>
                         <div className="pay-field">
                           <label className="pay-field-label">Max Bill Rate (Result)</label>
-                          <input className="crm-input" type="number" step="0.01" value={(() => {
+                          <input className="crm-input pay-result-input" type="number" step="0.01" value={(() => {
                             const pay = Number(order.financial.maxPayRate || 0);
                             const markup = Number(order.financial.markupMultiplier || 0);
                             return pay > 0 && markup > 0 ? Number((pay * markup).toFixed(2)) : "";
@@ -1984,7 +1984,7 @@ export function JobOrderFormWizard(props: {
                                 </div>
                                 <div className="pay-field">
                                   <label className="pay-field-label">Markup (Result)</label>
-                                  <input className="crm-input" type="number" step="0.0001" value={computedOptionMarkup ?? ""} disabled />
+                                  <input className="crm-input pay-result-input" type="number" step="0.0001" value={computedOptionMarkup ?? ""} disabled />
                                 </div>
                               </>
                             ) : (
@@ -2011,7 +2011,7 @@ export function JobOrderFormWizard(props: {
                                 </div>
                                 <div className="pay-field">
                                   <label className="pay-field-label">Bill Rate (Result)</label>
-                                  <input className="crm-input" type="number" step="0.01" value={computedOptionBill ?? ""} disabled />
+                                  <input className="crm-input pay-result-input" type="number" step="0.01" value={computedOptionBill ?? ""} disabled />
                                 </div>
                               </>
                             )}
