@@ -1,6 +1,12 @@
 import type { JobOrder } from "./types";
 
-const JOB_ORDER_EMAIL_RECIPIENT = "orders@talentcorp.com";
+const JOB_ORDER_EMAIL_RECIPIENT = "bhunt@talentcorps.com";
+
+function orderTypeSubjectLabel(orderType: JobOrder["orderType"]) {
+  if (orderType === "append") return "Add to Existing Job Order";
+  if (orderType === "new_for_existing_site") return "New Job Order for Existing Site";
+  return "New Job Order";
+}
 
 export type GeocodeResult = {
   formattedAddress: string;
@@ -63,7 +69,7 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     .map((position, idx) => `${idx + 1}) ${position.tradeRequested || "Unspecified trade"} - ${position.workersNeeded || 0} worker(s)`)
     .join("\n");
 
-  const subject = `[Job Order] ${order.clientName || "Unknown Client"} - ${order.projectName || "Unknown Project"}`;
+  const subject = `${orderTypeSubjectLabel(order.orderType)} - ${order.twid || "No TempWorks ID"} - ${order.clientName || "Unknown Client"}`;
   const payLines = [
     `Pay Structure: ${order.financial.payStructure || "single"}`,
     `Input Mode: ${order.financial.inputMode || "bill"}`,
@@ -107,6 +113,16 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     "",
     "Pay Details:",
     ...payLines,
+    "",
+    "Copy/Paste Fields:",
+    `Order Type Choice: ${orderTypeSubjectLabel(order.orderType)}`,
+    `TempWorks ID: ${order.twid || "-"}`,
+    `Client Name: ${order.clientName || "-"}`,
+    `Project Name: ${order.projectName || "-"}`,
+    `Job Site: ${order.jobSite.formattedAddress || order.jobSite.address || "-"}`,
+    `Primary Contact: ${order.contacts.primary.name || "-"}`,
+    `Primary Email: ${order.contacts.primary.email || "-"}`,
+    `Primary Phone: ${order.contacts.primary.phone || "-"}`,
     "",
     "Labor Positions:",
     laborSummary || "-",

@@ -9,6 +9,7 @@ type UploadState = {
   cipDocument?: File | null;
   cipInsuranceCertificate?: File | null;
   supplemental?: File | null;
+  generatedPdf?: File | null;
 };
 
 type AddressCandidate = {
@@ -76,6 +77,12 @@ function orderTypeBadgeText(orderType: JobOrder["orderType"]) {
   if (orderType === "append") return "ADD TO EXISTING";
   if (orderType === "new_for_existing_site") return "NEW FOR EXISTING SITE";
   return "NEW JOB ORDER";
+}
+
+function orderTypeSlug(orderType: JobOrder["orderType"]) {
+  if (orderType === "append") return "add_to_existing_job_order";
+  if (orderType === "new_for_existing_site") return "new_job_order_for_existing_site";
+  return "new_job_order";
 }
 
 function orderTypeTheme(orderType: JobOrder["orderType"]) {
@@ -737,7 +744,35 @@ export function JobOrderFormWizard(props: {
     if (!props.onSubmit) return;
     setIsSubmitting(true);
     try {
-      await props.onSubmit(order, uploads);
+      const cleanClientName = String(order.clientName || "unknown_client")
+        .trim()
+        .replace(/[^a-z0-9]+/gi, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 50) || "unknown_client";
+      const cleanTwid = String(order.twid || "no_twid")
+        .trim()
+        .replace(/[^a-z0-9]+/gi, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 24) || "no_twid";
+
+      const localPdfUrl = await generateLocalPdfUrl(order);
+      const localPdfBlob = await fetch(localPdfUrl).then((res) => res.blob());
+      const generatedPdf = new File(
+        [localPdfBlob],
+        `TalentCorps_${orderTypeSlug(order.orderType)}_${cleanTwid}_${cleanClientName}.pdf`,
+        { type: "application/pdf" }
+      );
+
+      if (pdfResultMode === "local" && pdfResultUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(pdfResultUrl);
+      }
+      setPdfResultUrl(localPdfUrl);
+      setPdfResultMode("local");
+      setPdfError("");
+
+      const nextUploads = { ...uploads, generatedPdf };
+      setUploads(nextUploads);
+      await props.onSubmit(order, nextUploads);
     } finally {
       setIsSubmitting(false);
     }
