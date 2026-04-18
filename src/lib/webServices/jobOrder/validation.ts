@@ -124,6 +124,9 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
       const bill = Number(rate.billRate || 0);
       const markup = Number(rate.markupMultiplier || 0);
       if (pay <= 0) issues.push({ field: `financial.variableRates.${index}.payRate`, message: `Rate option ${index + 1}: pay rate is required.`, severity: "error" });
+      if (!String(rate.label || "").trim()) {
+        issues.push({ field: `financial.variableRates.${index}.label`, message: `Rate option ${index + 1}: description is required.`, severity: "error" });
+      }
       if (order.financial.inputMode === "bill" && bill <= 0) {
         issues.push({ field: `financial.variableRates.${index}.billRate`, message: `Rate option ${index + 1}: bill rate is required in bill-rate mode.`, severity: "error" });
       }
@@ -131,9 +134,6 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
         issues.push({ field: `financial.variableRates.${index}.markupMultiplier`, message: `Rate option ${index + 1}: markup is required in markup mode.`, severity: "error" });
       }
     });
-    if (!String(order.financial.variablePayDescription || "").trim()) {
-      issues.push({ field: "financial.variablePayDescription", message: "Describe when variable pay applies.", severity: "error" });
-    }
   }
 
   if (order.perDiem.enabled) {

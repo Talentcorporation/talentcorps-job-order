@@ -1958,46 +1958,72 @@ export function JobOrderFormWizard(props: {
                             <strong>Rate Option {idx + 1}</strong>
                             <button className="crm-btn-secondary" type="button" onClick={() => removeVariableRate(idx)}>Remove</button>
                           </div>
-                          <div className="pay-rates-grid">
-                            <input className="crm-input" placeholder="Option Label (e.g. Nights, Hazard, Weekend)" value={rate.label || ""} onChange={(e) => updateVariableRate(idx, (r) => ({ ...r, label: e.target.value }))} />
-                            <input className="crm-input" type="number" step="0.01" placeholder="Pay Rate" value={rate.payRate ?? ""} onChange={(e) => updateVariableRate(idx, (r) => {
-                              const nextPay = Number(e.target.value || 0) || undefined;
-                              const nextBill = order.financial.inputMode === "markup" && nextPay && Number(r.markupMultiplier || 0) > 0
-                                ? Number((nextPay * Number(r.markupMultiplier || 0)).toFixed(2))
-                                : r.billRate;
-                              const nextMarkup = order.financial.inputMode === "bill" && nextPay && Number(r.billRate || 0) > 0
-                                ? Number((Number(r.billRate || 0) / nextPay).toFixed(4))
-                                : r.markupMultiplier;
-                              return { ...r, payRate: nextPay, billRate: nextBill, markupMultiplier: nextMarkup };
-                            })} />
-                            <input className="crm-input" type="number" step="0.01" placeholder="Bill Rate" disabled={order.financial.inputMode === "markup"} value={order.financial.inputMode === "markup" ? (computedOptionBill ?? "") : (rate.billRate ?? "")} onChange={(e) => updateVariableRate(idx, (r) => {
-                              const nextBill = Number(e.target.value || 0) || undefined;
-                              const nextMarkup = Number(r.payRate || 0) > 0 && nextBill
-                                ? Number((nextBill / Number(r.payRate || 0)).toFixed(4))
-                                : r.markupMultiplier;
-                              return { ...r, billRate: nextBill, markupMultiplier: nextMarkup };
-                            })} />
-                            <input className="crm-input" type="number" step="0.01" placeholder="Mark-up / Multiplier" disabled={order.financial.inputMode === "bill"} value={order.financial.inputMode === "bill" ? (computedOptionMarkup ?? "") : (rate.markupMultiplier ?? "")} onChange={(e) => updateVariableRate(idx, (r) => {
-                              const nextMarkup = Number(e.target.value || 0) || undefined;
-                              const nextBill = Number(r.payRate || 0) > 0 && nextMarkup
-                                ? Number((Number(r.payRate || 0) * nextMarkup).toFixed(2))
-                                : r.billRate;
-                              return { ...r, markupMultiplier: nextMarkup, billRate: nextBill };
-                            })} />
+                          <div className="pay-rates-grid pay-rates-grid-multiple">
+                            {order.financial.inputMode === "bill" ? (
+                              <>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Pay Rate</label>
+                                  <input className="crm-input" type="number" step="0.01" value={rate.payRate ?? ""} onChange={(e) => updateVariableRate(idx, (r) => {
+                                    const nextPay = Number(e.target.value || 0) || undefined;
+                                    const nextBill = Number(r.billRate || 0);
+                                    const nextMarkup = nextPay && nextBill > 0
+                                      ? Number((nextBill / nextPay).toFixed(4))
+                                      : r.markupMultiplier;
+                                    return { ...r, payRate: nextPay, markupMultiplier: nextMarkup };
+                                  })} />
+                                </div>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Bill Rate</label>
+                                  <input className="crm-input" type="number" step="0.01" value={rate.billRate ?? ""} onChange={(e) => updateVariableRate(idx, (r) => {
+                                    const nextBill = Number(e.target.value || 0) || undefined;
+                                    const nextMarkup = Number(r.payRate || 0) > 0 && nextBill
+                                      ? Number((nextBill / Number(r.payRate || 0)).toFixed(4))
+                                      : r.markupMultiplier;
+                                    return { ...r, billRate: nextBill, markupMultiplier: nextMarkup };
+                                  })} />
+                                </div>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Markup (Result)</label>
+                                  <input className="crm-input" type="number" step="0.0001" value={computedOptionMarkup ?? ""} disabled />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Markup</label>
+                                  <input className="crm-input" type="number" step="0.0001" value={rate.markupMultiplier ?? ""} onChange={(e) => updateVariableRate(idx, (r) => {
+                                    const nextMarkup = Number(e.target.value || 0) || undefined;
+                                    const nextBill = Number(r.payRate || 0) > 0 && nextMarkup
+                                      ? Number((Number(r.payRate || 0) * nextMarkup).toFixed(2))
+                                      : r.billRate;
+                                    return { ...r, markupMultiplier: nextMarkup, billRate: nextBill };
+                                  })} />
+                                </div>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Pay Rate</label>
+                                  <input className="crm-input" type="number" step="0.01" value={rate.payRate ?? ""} onChange={(e) => updateVariableRate(idx, (r) => {
+                                    const nextPay = Number(e.target.value || 0) || undefined;
+                                    const nextBill = nextPay && Number(r.markupMultiplier || 0) > 0
+                                      ? Number((nextPay * Number(r.markupMultiplier || 0)).toFixed(2))
+                                      : r.billRate;
+                                    return { ...r, payRate: nextPay, billRate: nextBill };
+                                  })} />
+                                </div>
+                                <div className="pay-field">
+                                  <label className="pay-field-label">Bill Rate (Result)</label>
+                                  <input className="crm-input" type="number" step="0.01" value={computedOptionBill ?? ""} disabled />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <div className="pay-field" style={{ marginTop: 8 }}>
+                            <label className="pay-field-label">Description</label>
+                            <input className="crm-input" value={rate.label || ""} onChange={(e) => updateVariableRate(idx, (r) => ({ ...r, label: e.target.value }))} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <textarea
-                    data-field="financial.variablePayDescription"
-                    className="crm-input pay-full"
-                    rows={3}
-                    placeholder="Describe when each pay option applies (required for variable pay)."
-                    value={order.financial.variablePayDescription || ""}
-                    onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, variablePayDescription: e.target.value } }))}
-                    style={{ marginTop: 8 }}
-                  />
                   <input className="crm-input pay-full" placeholder="PO #" value={order.financial.poNumber || ""} onChange={(e) => updateOrder((p) => ({ ...p, financial: { ...p.financial, poNumber: e.target.value } }))} style={{ marginTop: 8 }} />
                 </>
               ) : null}
