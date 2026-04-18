@@ -66,6 +66,9 @@ export type JobOrder = {
     supervisor: Contact;
     timesheet: Contact;
     generalContractor: Contact;
+    accounting: Contact;
+    safety: Contact;
+    otherContact: Contact;
     gcAddress?: string;
   };
 
@@ -181,6 +184,9 @@ export function createEmptyJobOrder(): JobOrder {
       supervisor: { name: "", phone: "", email: "", title: "" },
       timesheet: { name: "", phone: "", email: "", title: "" },
       generalContractor: { name: "", phone: "", email: "", title: "" },
+      accounting: { name: "", phone: "", email: "", title: "" },
+      safety: { name: "", phone: "", email: "", title: "" },
+      otherContact: { name: "", phone: "", email: "", title: "" },
       gcAddress: "",
     },
     laborPositions: [

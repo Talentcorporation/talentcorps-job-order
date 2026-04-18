@@ -216,14 +216,34 @@ export function JobOrderFormWizard(props: {
   const requestTypeBadge = useMemo(() => orderTypeBadgeText(order.orderType), [order.orderType]);
   const hasTimesheetValues = Boolean(
     order.contacts.timesheet.name?.trim() ||
+    order.contacts.timesheet.title?.trim() ||
     order.contacts.timesheet.phone?.trim() ||
     order.contacts.timesheet.email?.trim()
   );
   const hasGeneralContractorValues = Boolean(
     order.contacts.generalContractor.name?.trim() ||
+    order.contacts.generalContractor.title?.trim() ||
     order.contacts.generalContractor.phone?.trim() ||
     order.contacts.generalContractor.email?.trim() ||
     order.contacts.gcAddress?.trim()
+  );
+  const hasAccountingValues = Boolean(
+    order.contacts.accounting.name?.trim() ||
+    order.contacts.accounting.title?.trim() ||
+    order.contacts.accounting.phone?.trim() ||
+    order.contacts.accounting.email?.trim()
+  );
+  const hasSafetyValues = Boolean(
+    order.contacts.safety.name?.trim() ||
+    order.contacts.safety.title?.trim() ||
+    order.contacts.safety.phone?.trim() ||
+    order.contacts.safety.email?.trim()
+  );
+  const hasOtherContactValues = Boolean(
+    order.contacts.otherContact.name?.trim() ||
+    order.contacts.otherContact.title?.trim() ||
+    order.contacts.otherContact.phone?.trim() ||
+    order.contacts.otherContact.email?.trim()
   );
 
   const updateOrder = (updater: (next: JobOrder) => JobOrder) => {
@@ -891,11 +911,14 @@ export function JobOrderFormWizard(props: {
     ]);
 
     drawSection("Contacts", [
-      ["Primary", fit(`${nextOrder.contacts.primary.name || "-"} | ${nextOrder.contacts.primary.email || "-"}`)],
-      ["Supervisor", fit(`${nextOrder.contacts.supervisor.name || "-"} | ${nextOrder.contacts.supervisor.email || "-"}`)],
-      ["Timesheet", fit(`${nextOrder.contacts.timesheet.name || "-"} | ${nextOrder.contacts.timesheet.email || "-"}`)],
+      ["Primary", fit(`${nextOrder.contacts.primary.name || "-"} (${nextOrder.contacts.primary.title || "-"}) | ${nextOrder.contacts.primary.email || "-"}`)],
+      ["Supervisor", fit(`${nextOrder.contacts.supervisor.name || "-"} (${nextOrder.contacts.supervisor.title || "-"}) | ${nextOrder.contacts.supervisor.email || "-"}`)],
+      ["Timesheet", fit(`${nextOrder.contacts.timesheet.name || "-"} (${nextOrder.contacts.timesheet.title || "-"}) | ${nextOrder.contacts.timesheet.email || "-"}`)],
       ["General Contractor", fit(`${nextOrder.contacts.generalContractor.name || "-"} | ${nextOrder.contacts.generalContractor.phone || "-"}`)],
       ["GC Address", fit(nextOrder.contacts.gcAddress || "-")],
+      ["Accounting", fit(`${nextOrder.contacts.accounting.name || "-"} (${nextOrder.contacts.accounting.title || "-"}) | ${nextOrder.contacts.accounting.email || "-"}`)],
+      ["Safety", fit(`${nextOrder.contacts.safety.name || "-"} (${nextOrder.contacts.safety.title || "-"}) | ${nextOrder.contacts.safety.email || "-"}`)],
+      ["Other Contact", fit(`${nextOrder.contacts.otherContact.name || "-"} (${nextOrder.contacts.otherContact.title || "-"}) | ${nextOrder.contacts.otherContact.email || "-"}`)],
     ]);
 
     nextOrder.laborPositions.forEach((position, index) => {
@@ -1434,8 +1457,9 @@ export function JobOrderFormWizard(props: {
               <h4 className="crm-section-title" style={{ fontSize: 15, marginBottom: 10 }}>Primary Contact</h4>
               <div className="contacts-fields-grid">
                 <input data-field="contacts.primary.name" className="crm-input" placeholder="Primary Contact Name" value={order.contacts.primary.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, primary: { ...p.contacts.primary, name: e.target.value } } }))} />
+                <input className="crm-input" placeholder="Primary Contact Title" value={order.contacts.primary.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, primary: { ...p.contacts.primary, title: e.target.value } } }))} />
                 <input className="crm-input" placeholder="Primary Contact Phone" value={order.contacts.primary.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, primary: { ...p.contacts.primary, phone: e.target.value } } }))} />
-                <input className="crm-input contacts-full" placeholder="Primary Contact Email" value={order.contacts.primary.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, primary: { ...p.contacts.primary, email: e.target.value } } }))} />
+                <input className="crm-input" placeholder="Primary Contact Email" value={order.contacts.primary.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, primary: { ...p.contacts.primary, email: e.target.value } } }))} />
               </div>
             </div>
 
@@ -1443,8 +1467,9 @@ export function JobOrderFormWizard(props: {
               <h4 className="crm-section-title" style={{ fontSize: 15, marginBottom: 10 }}>Site Supervisor</h4>
               <div className="contacts-fields-grid">
                 <input className="crm-input" placeholder="Site Supervisor Name" value={order.contacts.supervisor.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, supervisor: { ...p.contacts.supervisor, name: e.target.value } } }))} />
+                <input className="crm-input" placeholder="Site Supervisor Title" value={order.contacts.supervisor.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, supervisor: { ...p.contacts.supervisor, title: e.target.value } } }))} />
                 <input className="crm-input" placeholder="Site Supervisor Phone" value={order.contacts.supervisor.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, supervisor: { ...p.contacts.supervisor, phone: e.target.value } } }))} />
-                <input className="crm-input contacts-full" placeholder="Site Supervisor Email" value={order.contacts.supervisor.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, supervisor: { ...p.contacts.supervisor, email: e.target.value } } }))} />
+                <input className="crm-input" placeholder="Site Supervisor Email" value={order.contacts.supervisor.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, supervisor: { ...p.contacts.supervisor, email: e.target.value } } }))} />
               </div>
             </div>
 
@@ -1456,8 +1481,9 @@ export function JobOrderFormWizard(props: {
                 <summary className="contacts-disclosure-summary">Timesheet Contact</summary>
                 <div className="contacts-fields-grid" style={{ marginTop: 8 }}>
                   <input className="crm-input" placeholder="Timesheet Contact Name" value={order.contacts.timesheet.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, timesheet: { ...p.contacts.timesheet, name: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Timesheet Contact Title" value={order.contacts.timesheet.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, timesheet: { ...p.contacts.timesheet, title: e.target.value } } }))} />
                   <input className="crm-input" placeholder="Timesheet Contact Phone" value={order.contacts.timesheet.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, timesheet: { ...p.contacts.timesheet, phone: e.target.value } } }))} />
-                  <input className="crm-input contacts-full" placeholder="Timesheet Contact Email" value={order.contacts.timesheet.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, timesheet: { ...p.contacts.timesheet, email: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Timesheet Contact Email" value={order.contacts.timesheet.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, timesheet: { ...p.contacts.timesheet, email: e.target.value } } }))} />
                 </div>
               </details>
 
@@ -1465,8 +1491,9 @@ export function JobOrderFormWizard(props: {
                 <summary className="contacts-disclosure-summary">General Contractor</summary>
                 <div className="contacts-fields-grid" style={{ marginTop: 8 }}>
                   <input className="crm-input" placeholder="General Contractor Name" value={order.contacts.generalContractor.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, generalContractor: { ...p.contacts.generalContractor, name: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="General Contractor Title" value={order.contacts.generalContractor.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, generalContractor: { ...p.contacts.generalContractor, title: e.target.value } } }))} />
                   <input className="crm-input" placeholder="General Contractor Phone" value={order.contacts.generalContractor.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, generalContractor: { ...p.contacts.generalContractor, phone: e.target.value } } }))} />
-                  <input className="crm-input contacts-full" placeholder="General Contractor Email" value={order.contacts.generalContractor.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, generalContractor: { ...p.contacts.generalContractor, email: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="General Contractor Email" value={order.contacts.generalContractor.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, generalContractor: { ...p.contacts.generalContractor, email: e.target.value } } }))} />
                   <input
                     data-field="contacts.gcAddress"
                     ref={gcAddressInputRef}
@@ -1499,6 +1526,36 @@ export function JobOrderFormWizard(props: {
                     </div>
                   </div>
                 ) : null}
+              </details>
+
+              <details className="contacts-disclosure" open={hasAccountingValues}>
+                <summary className="contacts-disclosure-summary">Accounting Contact</summary>
+                <div className="contacts-fields-grid" style={{ marginTop: 8 }}>
+                  <input className="crm-input" placeholder="Accounting Contact Name" value={order.contacts.accounting.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, accounting: { ...p.contacts.accounting, name: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Accounting Contact Title" value={order.contacts.accounting.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, accounting: { ...p.contacts.accounting, title: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Accounting Contact Phone" value={order.contacts.accounting.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, accounting: { ...p.contacts.accounting, phone: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Accounting Contact Email" value={order.contacts.accounting.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, accounting: { ...p.contacts.accounting, email: e.target.value } } }))} />
+                </div>
+              </details>
+
+              <details className="contacts-disclosure" open={hasSafetyValues}>
+                <summary className="contacts-disclosure-summary">Safety Contact</summary>
+                <div className="contacts-fields-grid" style={{ marginTop: 8 }}>
+                  <input className="crm-input" placeholder="Safety Contact Name" value={order.contacts.safety.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, safety: { ...p.contacts.safety, name: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Safety Contact Title" value={order.contacts.safety.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, safety: { ...p.contacts.safety, title: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Safety Contact Phone" value={order.contacts.safety.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, safety: { ...p.contacts.safety, phone: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Safety Contact Email" value={order.contacts.safety.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, safety: { ...p.contacts.safety, email: e.target.value } } }))} />
+                </div>
+              </details>
+
+              <details className="contacts-disclosure" open={hasOtherContactValues}>
+                <summary className="contacts-disclosure-summary">Other Contact</summary>
+                <div className="contacts-fields-grid" style={{ marginTop: 8 }}>
+                  <input className="crm-input" placeholder="Other Contact Name" value={order.contacts.otherContact.name} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, otherContact: { ...p.contacts.otherContact, name: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Other Contact Title" value={order.contacts.otherContact.title || ""} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, otherContact: { ...p.contacts.otherContact, title: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Other Contact Phone" value={order.contacts.otherContact.phone} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, otherContact: { ...p.contacts.otherContact, phone: e.target.value } } }))} />
+                  <input className="crm-input" placeholder="Other Contact Email" value={order.contacts.otherContact.email} onChange={(e) => updateOrder((p) => ({ ...p, contacts: { ...p.contacts, otherContact: { ...p.contacts.otherContact, email: e.target.value } } }))} />
+                </div>
               </details>
 
               {!hasPlacesKey ? <p className="crm-muted" style={{ marginTop: 10 }}>{placesUnavailableNotice}</p> : null}
