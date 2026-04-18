@@ -591,6 +591,29 @@ html, body {
   grid-template-columns: repeat(3, minmax(140px, 1fr));
 }
 
+.pay-range-stack {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.pay-range-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.pay-field {
+  display: grid;
+  gap: 4px;
+}
+
+.pay-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
 .pay-full {
   grid-column: 1 / -1;
 }
@@ -730,6 +753,7 @@ html, body {
   .snapshot-form-grid-3,
   .snapshot-form-grid-site,
   .pay-rates-grid,
+  .pay-range-row,
   .snapshot-map-grid {
     grid-template-columns: 1fr;
   }
