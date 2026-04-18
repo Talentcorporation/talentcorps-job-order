@@ -67,21 +67,63 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
   if (!order.scheduleDays.length) issues.push({ field: "scheduleDays", message: "Select at least one schedule day.", severity: "warning" });
   if (!order.shiftTypes.length) issues.push({ field: "shiftTypes", message: "Select day shift, night shift, or both.", severity: "warning" });
 
-  if (order.financial.inputMode === "bill") {
-    if (!order.financial.payRate || order.financial.payRate <= 0) {
-      issues.push({ field: "financial.payRate", message: "Pay rate is required when bill-rate mode is selected.", severity: "error" });
+  if (order.financial.payStructure === "single") {
+    if (order.financial.inputMode === "bill") {
+      if (!order.financial.payRate || order.financial.payRate <= 0) {
+        issues.push({ field: "financial.payRate", message: "Pay rate is required when bill-rate mode is selected.", severity: "error" });
+      }
+      if (!order.financial.billRate || order.financial.billRate <= 0) {
+        issues.push({ field: "financial.billRate", message: "Bill rate is required in bill-rate mode.", severity: "error" });
+      }
     }
-    if (!order.financial.billRate || order.financial.billRate <= 0) {
-      issues.push({ field: "financial.billRate", message: "Bill rate is required in bill-rate mode.", severity: "error" });
+
+    if (order.financial.inputMode === "markup") {
+      if (!order.financial.payRate || order.financial.payRate <= 0) {
+        issues.push({ field: "financial.payRate", message: "Pay rate is required when markup mode is selected.", severity: "error" });
+      }
+      if (!order.financial.markupMultiplier || order.financial.markupMultiplier <= 0) {
+        issues.push({ field: "financial.markupMultiplier", message: "Markup multiplier is required in markup mode.", severity: "error" });
+      }
     }
   }
 
-  if (order.financial.inputMode === "markup") {
-    if (!order.financial.payRate || order.financial.payRate <= 0) {
-      issues.push({ field: "financial.payRate", message: "Pay rate is required when markup mode is selected.", severity: "error" });
+  if (order.financial.payStructure === "range") {
+    const minPay = Number(order.financial.minPayRate || 0);
+    const maxPay = Number(order.financial.maxPayRate || 0);
+    const minBill = Number(order.financial.minBillRate || 0);
+    const maxBill = Number(order.financial.maxBillRate || 0);
+
+    if (minPay <= 0) issues.push({ field: "financial.minPayRate", message: "Minimum pay rate is required for pay range.", severity: "error" });
+    if (maxPay <= 0) issues.push({ field: "financial.maxPayRate", message: "Maximum pay rate is required for pay range.", severity: "error" });
+    if (minBill <= 0) issues.push({ field: "financial.minBillRate", message: "Minimum bill rate is required for pay range.", severity: "error" });
+    if (maxBill <= 0) issues.push({ field: "financial.maxBillRate", message: "Maximum bill rate is required for pay range.", severity: "error" });
+    if (minPay > 0 && maxPay > 0 && minPay > maxPay) {
+      issues.push({ field: "financial.maxPayRate", message: "Maximum pay rate must be greater than or equal to minimum pay rate.", severity: "error" });
     }
-    if (!order.financial.markupMultiplier || order.financial.markupMultiplier <= 0) {
-      issues.push({ field: "financial.markupMultiplier", message: "Markup multiplier is required in markup mode.", severity: "error" });
+    if (minBill > 0 && maxBill > 0 && minBill > maxBill) {
+      issues.push({ field: "financial.maxBillRate", message: "Maximum bill rate must be greater than or equal to minimum bill rate.", severity: "error" });
+    }
+  }
+
+  if (order.financial.payStructure === "multiple") {
+    const rates = order.financial.variableRates || [];
+    if (!rates.length) {
+      issues.push({ field: "financial.variableRates", message: "Add at least one variable pay rate option.", severity: "error" });
+    }
+    rates.forEach((rate, index) => {
+      const pay = Number(rate.payRate || 0);
+      const bill = Number(rate.billRate || 0);
+      const markup = Number(rate.markupMultiplier || 0);
+      if (pay <= 0) issues.push({ field: `financial.variableRates.${index}.payRate`, message: `Rate option ${index + 1}: pay rate is required.`, severity: "error" });
+      if (order.financial.inputMode === "bill" && bill <= 0) {
+        issues.push({ field: `financial.variableRates.${index}.billRate`, message: `Rate option ${index + 1}: bill rate is required in bill-rate mode.`, severity: "error" });
+      }
+      if (order.financial.inputMode === "markup" && markup <= 0) {
+        issues.push({ field: `financial.variableRates.${index}.markupMultiplier`, message: `Rate option ${index + 1}: markup is required in markup mode.`, severity: "error" });
+      }
+    });
+    if (!String(order.financial.variablePayDescription || "").trim()) {
+      issues.push({ field: "financial.variablePayDescription", message: "Describe when variable pay applies.", severity: "error" });
     }
   }
 

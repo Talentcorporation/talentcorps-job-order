@@ -22,6 +22,13 @@ export type LaborPosition = {
   submittalProcess: string;
 };
 
+export type VariablePayRate = {
+  label?: string;
+  payRate?: number;
+  billRate?: number;
+  markupMultiplier?: number;
+};
+
 export type JobOrder = {
   id: string;
   createdAt: string;
@@ -65,10 +72,17 @@ export type JobOrder = {
   laborPositions: LaborPosition[];
 
   financial: {
+    payStructure: "single" | "range" | "multiple";
     inputMode: "bill" | "markup";
     payRate?: number;
     billRate?: number;
     markupMultiplier?: number;
+    minPayRate?: number;
+    maxPayRate?: number;
+    minBillRate?: number;
+    maxBillRate?: number;
+    variableRates: VariablePayRate[];
+    variablePayDescription?: string;
     poNumber?: string;
   };
 
@@ -171,10 +185,17 @@ export function createEmptyJobOrder(): JobOrder {
       },
     ],
     financial: {
+      payStructure: "single",
       inputMode: "bill",
       payRate: undefined,
       billRate: undefined,
       markupMultiplier: undefined,
+      minPayRate: undefined,
+      maxPayRate: undefined,
+      minBillRate: undefined,
+      maxBillRate: undefined,
+      variableRates: [],
+      variablePayDescription: "",
       poNumber: "",
     },
     onboarding: {

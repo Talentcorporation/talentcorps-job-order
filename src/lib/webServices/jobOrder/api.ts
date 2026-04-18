@@ -64,6 +64,31 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     .join("\n");
 
   const subject = `[Job Order] ${order.clientName || "Unknown Client"} - ${order.projectName || "Unknown Project"}`;
+  const payLines = [
+    `Pay Structure: ${order.financial.payStructure || "single"}`,
+    `Input Mode: ${order.financial.inputMode || "bill"}`,
+  ];
+  if (order.financial.payStructure === "single") {
+    payLines.push(
+      `Pay Rate: ${order.financial.payRate ? `$${order.financial.payRate.toFixed(2)}` : "-"}`,
+      `Bill Rate: ${order.financial.billRate ? `$${order.financial.billRate.toFixed(2)}` : "-"}`,
+      `Markup: ${order.financial.markupMultiplier || "-"}`
+    );
+  }
+  if (order.financial.payStructure === "range") {
+    payLines.push(
+      `Pay Range: ${order.financial.minPayRate ? `$${order.financial.minPayRate.toFixed(2)}` : "-"} to ${order.financial.maxPayRate ? `$${order.financial.maxPayRate.toFixed(2)}` : "-"}`,
+      `Bill Range: ${order.financial.minBillRate ? `$${order.financial.minBillRate.toFixed(2)}` : "-"} to ${order.financial.maxBillRate ? `$${order.financial.maxBillRate.toFixed(2)}` : "-"}`
+    );
+  }
+  if (order.financial.payStructure === "multiple") {
+    payLines.push(`Variable Pay Notes: ${order.financial.variablePayDescription || "-"}`);
+    (order.financial.variableRates || []).forEach((rate, idx) => {
+      payLines.push(`Rate Option ${idx + 1}: ${rate.label || "(no label)"} | Pay ${rate.payRate ? `$${rate.payRate.toFixed(2)}` : "-"} | Bill ${rate.billRate ? `$${rate.billRate.toFixed(2)}` : "-"} | Markup ${rate.markupMultiplier || "-"}`);
+    });
+  }
+  payLines.push(`PO Number: ${order.financial.poNumber || "-"}`);
+
   const bodyLines = [
     "Job Order Submission",
     "",
@@ -78,6 +103,9 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     `End Date: ${order.endDate || "-"}`,
     `Shift: ${order.shiftStart || "-"} to ${order.shiftEnd || "-"}`,
     `Schedule Days: ${order.scheduleDays.join(", ") || "-"}`,
+    "",
+    "Pay Details:",
+    ...payLines,
     "",
     "Labor Positions:",
     laborSummary || "-",
