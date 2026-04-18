@@ -105,13 +105,22 @@ export type JobOrder = {
       enabled: boolean;
       enrollmentRequired?: boolean;
       details?: string;
-      followUpNotes?: string;
+      contact?: Contact;
+      portalInformation?: string;
+      note?: string;
+      wrapTypes?: {
+        ocip: boolean;
+        ccip: boolean;
+        rocip: boolean;
+      };
+      insuranceCertificateAttached?: boolean;
     };
     prevailingWage: {
       enabled: boolean;
       certifiedPayrollRequired?: boolean;
       wageDeterminationAttached?: boolean;
       wageDeterminationNotes?: string;
+      portalInformation?: string;
       reportingContact?: Contact;
     };
     fringe: {
@@ -215,13 +224,22 @@ export function createEmptyJobOrder(): JobOrder {
         enabled: false,
         enrollmentRequired: false,
         details: "",
-        followUpNotes: "",
+        contact: { name: "", phone: "", email: "", title: "" },
+        portalInformation: "",
+        note: "",
+        wrapTypes: {
+          ocip: false,
+          ccip: false,
+          rocip: false,
+        },
+        insuranceCertificateAttached: false,
       },
       prevailingWage: {
         enabled: false,
         certifiedPayrollRequired: false,
         wageDeterminationAttached: false,
         wageDeterminationNotes: "",
+        portalInformation: "",
         reportingContact: { name: "", phone: "", email: "", title: "" },
       },
       fringe: {

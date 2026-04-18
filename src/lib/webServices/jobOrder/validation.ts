@@ -162,11 +162,13 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
   }
 
   if (order.compliance.cipWrap.enabled) {
-    if (!order.compliance.cipWrap.details?.trim()) {
-      issues.push({ field: "compliance.cipWrap.details", message: "CIP / wrap details are required.", severity: "error" });
+    const wrapTypes = order.compliance.cipWrap.wrapTypes;
+    const hasWrapType = Boolean(wrapTypes?.ocip || wrapTypes?.ccip || wrapTypes?.rocip);
+    if (!hasWrapType) {
+      issues.push({ field: "compliance.cipWrap.wrapTypes", message: "Select at least one wrap type (OCIP, CCIP, or ROCIP).", severity: "error" });
     }
-    if (!order.compliance.cipWrap.followUpNotes?.trim()) {
-      issues.push({ field: "compliance.cipWrap.followUpNotes", message: "CIP follow-up notes are required for Field Ops.", severity: "warning" });
+    if (!order.compliance.cipWrap.note?.trim()) {
+      issues.push({ field: "compliance.cipWrap.note", message: "Wrap note is recommended for Field Ops.", severity: "warning" });
     }
   }
 
@@ -182,11 +184,12 @@ export function validateJobOrder(order: JobOrder): ValidationIssue[] {
       if (order.compliance.prevailingWage.certifiedPayrollRequired) {
         const reporting = order.compliance.prevailingWage.reportingContact;
         const missingName = !reporting?.name?.trim();
+        const missingPhone = !reporting?.phone?.trim();
         const missingEmail = !reporting?.email?.trim();
-        if (missingName || missingEmail) {
+        if (missingName || missingPhone || missingEmail) {
           issues.push({
             field: "compliance.prevailingWage.reportingContact.name",
-            message: "Certified payroll reporting contact name and email are required.",
+            message: "Certified payroll contact name, phone, and email are required.",
             severity: "error",
           });
         }

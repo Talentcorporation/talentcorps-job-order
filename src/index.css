@@ -176,6 +176,10 @@ html, body {
   grid-template-columns: repeat(3, minmax(170px, 1fr));
 }
 
+.crm-grid.filters-2 {
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+}
+
 .crm-field {
   min-width: 0;
 }
@@ -744,6 +748,7 @@ html, body {
 @media (max-width: 900px) {
   .crm-wrap { padding: 10px; }
   .crm-grid.filters-6,
+  .crm-grid.filters-2,
   .crm-grid.filters-3 {
     grid-template-columns: 1fr;
   }

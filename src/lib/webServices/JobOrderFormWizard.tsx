@@ -7,6 +7,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 type UploadState = {
   wageSheet?: File | null;
   cipDocument?: File | null;
+  cipInsuranceCertificate?: File | null;
   supplemental?: File | null;
 };
 
@@ -946,7 +947,20 @@ export function JobOrderFormWizard(props: {
 
     drawSection("Compliance & Onboarding", [
       ["CIP / Wrap", nextOrder.compliance.cipWrap.enabled ? "Yes" : "No"],
-      ["CIP Details", fit(nextOrder.compliance.cipWrap.details || "-")],
+      [
+        "Wrap Type",
+        nextOrder.compliance.cipWrap.wrapTypes
+          ? [
+              nextOrder.compliance.cipWrap.wrapTypes.ocip ? "OCIP" : "",
+              nextOrder.compliance.cipWrap.wrapTypes.ccip ? "CCIP" : "",
+              nextOrder.compliance.cipWrap.wrapTypes.rocip ? "ROCIP" : "",
+            ].filter(Boolean).join(", ") || "-"
+          : "-",
+      ],
+      ["CIP Contact", fit(`${nextOrder.compliance.cipWrap.contact?.name || "-"} | ${nextOrder.compliance.cipWrap.contact?.phone || "-"} | ${nextOrder.compliance.cipWrap.contact?.email || "-"}`)],
+      ["CIP Portal", fit(nextOrder.compliance.cipWrap.portalInformation || "-")],
+      ["CIP Note", fit(nextOrder.compliance.cipWrap.note || "-")],
+      ["Insurance Certificate Attached", nextOrder.compliance.cipWrap.insuranceCertificateAttached ? "Yes" : "No"],
       ["Drug Test Required", nextOrder.onboarding.drugScreenRequired ? "Yes" : "No"],
       ["Drug Test Type", nextOrder.onboarding.drugScreenType || "-"],
       ["Background Required", nextOrder.onboarding.backgroundRequired ? "Yes" : "No"],
@@ -955,6 +969,9 @@ export function JobOrderFormWizard(props: {
       ["Badging Details", fit(nextOrder.onboarding.badgingDetails || "-")],
       ["Prevailing Wage", nextOrder.compliance.prevailingWage.enabled ? "Yes" : "No"],
       ["Certified Payroll", nextOrder.compliance.prevailingWage.certifiedPayrollRequired ? "Required" : "Not Required"],
+      ["Prevailing Wage Contact", fit(`${nextOrder.compliance.prevailingWage.reportingContact?.name || "-"} | ${nextOrder.compliance.prevailingWage.reportingContact?.phone || "-"} | ${nextOrder.compliance.prevailingWage.reportingContact?.email || "-"}`)],
+      ["Prevailing Portal", fit(nextOrder.compliance.prevailingWage.portalInformation || "-")],
+      ["Prevailing Note", fit(nextOrder.compliance.prevailingWage.wageDeterminationNotes || "-")],
       ["Fringe", nextOrder.compliance.fringe.enabled ? "Yes" : "No"],
       ["Fringe Details", fit(nextOrder.compliance.fringe.details || "-")],
     ]);
@@ -2102,10 +2119,85 @@ export function JobOrderFormWizard(props: {
             <label className="crm-row" style={{ gap: 8 }}><input type="checkbox" checked={order.compliance.cipWrap.enabled} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, enabled: e.target.checked } } }))} /> CIP / Wrap Applies</label>
             {order.compliance.cipWrap.enabled ? (
               <>
-                <textarea data-field="compliance.cipWrap.details" className="crm-input" rows={3} placeholder="CIP / Wrap details" value={order.compliance.cipWrap.details || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, details: e.target.value } } }))} />
-                <textarea data-field="compliance.cipWrap.followUpNotes" className="crm-input" rows={2} placeholder="Enrollment / follow-up notes for Field Ops" value={order.compliance.cipWrap.followUpNotes || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, followUpNotes: e.target.value } } }))} />
-                <label className="crm-sub" style={{ display: "block", marginTop: 6 }}>Upload CIP Document</label>
-                <input type="file" accept="application/pdf,image/*" capture="environment" onChange={(e) => setUploads((u) => ({ ...u, cipDocument: e.target.files?.[0] || null }))} />
+                <div className="crm-grid filters-3" style={{ marginTop: 8 }}>
+                  <label className="crm-row" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(order.compliance.cipWrap.wrapTypes?.ocip)}
+                      onChange={(e) => updateOrder((p) => ({
+                        ...p,
+                        compliance: {
+                          ...p.compliance,
+                          cipWrap: {
+                            ...p.compliance.cipWrap,
+                            wrapTypes: {
+                              ...(p.compliance.cipWrap.wrapTypes || { ocip: false, ccip: false, rocip: false }),
+                              ocip: e.target.checked,
+                            },
+                          },
+                        },
+                      }))}
+                    />
+                    OCIP
+                  </label>
+                  <label className="crm-row" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(order.compliance.cipWrap.wrapTypes?.ccip)}
+                      onChange={(e) => updateOrder((p) => ({
+                        ...p,
+                        compliance: {
+                          ...p.compliance,
+                          cipWrap: {
+                            ...p.compliance.cipWrap,
+                            wrapTypes: {
+                              ...(p.compliance.cipWrap.wrapTypes || { ocip: false, ccip: false, rocip: false }),
+                              ccip: e.target.checked,
+                            },
+                          },
+                        },
+                      }))}
+                    />
+                    CCIP
+                  </label>
+                  <label className="crm-row" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(order.compliance.cipWrap.wrapTypes?.rocip)}
+                      onChange={(e) => updateOrder((p) => ({
+                        ...p,
+                        compliance: {
+                          ...p.compliance,
+                          cipWrap: {
+                            ...p.compliance.cipWrap,
+                            wrapTypes: {
+                              ...(p.compliance.cipWrap.wrapTypes || { ocip: false, ccip: false, rocip: false }),
+                              rocip: e.target.checked,
+                            },
+                          },
+                        },
+                      }))}
+                    />
+                    ROCIP
+                  </label>
+                </div>
+
+                <div className="crm-grid filters-3" style={{ marginTop: 8 }}>
+                  <input data-field="compliance.cipWrap.contact.name" className="crm-input" placeholder="Contact Name" value={order.compliance.cipWrap.contact?.name || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, contact: { ...(p.compliance.cipWrap.contact || { name: "", phone: "", email: "", title: "" }), name: e.target.value } } } }))} />
+                  <input data-field="compliance.cipWrap.contact.phone" className="crm-input" placeholder="Contact Phone" value={order.compliance.cipWrap.contact?.phone || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, contact: { ...(p.compliance.cipWrap.contact || { name: "", phone: "", email: "", title: "" }), phone: e.target.value } } } }))} />
+                  <input data-field="compliance.cipWrap.contact.email" className="crm-input" placeholder="Contact Email" value={order.compliance.cipWrap.contact?.email || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, contact: { ...(p.compliance.cipWrap.contact || { name: "", phone: "", email: "", title: "" }), email: e.target.value } } } }))} />
+                </div>
+
+                <div className="crm-grid filters-2" style={{ marginTop: 8 }}>
+                  <input data-field="compliance.cipWrap.portalInformation" className="crm-input" placeholder="Portal Information" value={order.compliance.cipWrap.portalInformation || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, portalInformation: e.target.value } } }))} />
+                  <input data-field="compliance.cipWrap.note" className="crm-input" placeholder="Note" value={order.compliance.cipWrap.note || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, note: e.target.value } } }))} />
+                </div>
+
+                <label className="crm-row" style={{ gap: 8, marginTop: 8 }}>
+                  <input data-field="compliance.cipWrap.insuranceCertificateAttached" type="checkbox" checked={Boolean(order.compliance.cipWrap.insuranceCertificateAttached)} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, cipWrap: { ...p.compliance.cipWrap, insuranceCertificateAttached: e.target.checked } } }))} /> Insurance certificate example attached (if available)
+                </label>
+                <label className="crm-sub" style={{ display: "block", marginTop: 6 }}>Upload Insurance Certificate Example (if available)</label>
+                <input type="file" accept="application/pdf,image/*" capture="environment" onChange={(e) => setUploads((u) => ({ ...u, cipInsuranceCertificate: e.target.files?.[0] || null }))} />
               </>
             ) : null}
           </div>
@@ -2146,15 +2238,17 @@ export function JobOrderFormWizard(props: {
                     }))}
                   /> Certified payroll required for this prevailing wage job
                 </label>
-                <textarea data-field="compliance.prevailingWage.wageDeterminationNotes" className="crm-input" rows={2} placeholder="Prevailing wage notes" value={order.compliance.prevailingWage.wageDeterminationNotes || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, wageDeterminationNotes: e.target.value } } }))} />
+                <div className="crm-grid filters-3" style={{ marginTop: 8 }}>
+                  <input data-field="compliance.prevailingWage.reportingContact.name" className="crm-input" placeholder="Contact Name" value={order.compliance.prevailingWage.reportingContact?.name || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, reportingContact: { ...(p.compliance.prevailingWage.reportingContact || { name: "", phone: "", email: "" }), name: e.target.value } } } }))} />
+                  <input data-field="compliance.prevailingWage.reportingContact.phone" className="crm-input" placeholder="Contact Phone" value={order.compliance.prevailingWage.reportingContact?.phone || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, reportingContact: { ...(p.compliance.prevailingWage.reportingContact || { name: "", phone: "", email: "" }), phone: e.target.value } } } }))} />
+                  <input data-field="compliance.prevailingWage.reportingContact.email" className="crm-input" placeholder="Contact Email" value={order.compliance.prevailingWage.reportingContact?.email || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, reportingContact: { ...(p.compliance.prevailingWage.reportingContact || { name: "", phone: "", email: "" }), email: e.target.value } } } }))} />
+                </div>
+                <div className="crm-grid filters-2" style={{ marginTop: 8 }}>
+                  <input data-field="compliance.prevailingWage.portalInformation" className="crm-input" placeholder="Portal Information" value={order.compliance.prevailingWage.portalInformation || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, portalInformation: e.target.value } } }))} />
+                  <input data-field="compliance.prevailingWage.wageDeterminationNotes" className="crm-input" placeholder="Note" value={order.compliance.prevailingWage.wageDeterminationNotes || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, wageDeterminationNotes: e.target.value } } }))} />
+                </div>
                 <label className="crm-sub" style={{ display: "block", marginTop: 6 }}>Upload Wage Determination Sheet (or scan)</label>
                 <input type="file" accept="application/pdf,image/*" capture="environment" onChange={(e) => setUploads((u) => ({ ...u, wageSheet: e.target.files?.[0] || null }))} />
-                {order.compliance.prevailingWage.certifiedPayrollRequired ? (
-                  <div className="crm-grid filters-2" style={{ marginTop: 8 }}>
-                    <input data-field="compliance.prevailingWage.reportingContact.name" className="crm-input" placeholder="Certified Payroll Reporting Contact" value={order.compliance.prevailingWage.reportingContact?.name || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, reportingContact: { ...(p.compliance.prevailingWage.reportingContact || { name: "", phone: "", email: "" }), name: e.target.value } } } }))} />
-                    <input data-field="compliance.prevailingWage.reportingContact.email" className="crm-input" placeholder="Certified Payroll Reporting Email" value={order.compliance.prevailingWage.reportingContact?.email || ""} onChange={(e) => updateOrder((p) => ({ ...p, compliance: { ...p.compliance, prevailingWage: { ...p.compliance.prevailingWage, reportingContact: { ...(p.compliance.prevailingWage.reportingContact || { name: "", phone: "", email: "" }), email: e.target.value } } } }))} />
-                  </div>
-                ) : null}
               </>
             ) : null}
           </div>
