@@ -180,7 +180,7 @@ function createEmptyVariableRate(): VariablePayRate {
 
 export function JobOrderFormWizard(props: {
   onBack: () => void;
-  onSubmit?: (order: JobOrder, uploads: UploadState) => Promise<void>;
+  onSubmit?: (order: JobOrder, uploads: UploadState) => Promise<{ submissionId?: string } | void>;
 }) {
   const [step, setStep] = useState(0);
   const [order, setOrder] = useState<JobOrder>(createEmptyJobOrder());
@@ -198,6 +198,7 @@ export function JobOrderFormWizard(props: {
   const [brandLogoSrc, setBrandLogoSrc] = useState("/assets/tc-logo.png");
   const [deviceLocation, setDeviceLocation] = useState<DeviceLocation | null>(null);
   const [jobSiteQuery, setJobSiteQuery] = useState("");
+  const [submitBanner, setSubmitBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const addressInputRef = useRef<HTMLInputElement | null>(null);
   const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -743,6 +744,7 @@ export function JobOrderFormWizard(props: {
     }
     if (!props.onSubmit) return;
     setIsSubmitting(true);
+    setSubmitBanner(null);
     try {
       const cleanClientName = String(order.clientName || "unknown_client")
         .trim()
@@ -772,7 +774,16 @@ export function JobOrderFormWizard(props: {
 
       const nextUploads = { ...uploads, generatedPdf };
       setUploads(nextUploads);
-      await props.onSubmit(order, nextUploads);
+      const result = await props.onSubmit(order, nextUploads);
+      const submittedId = result && typeof result === "object" && "submissionId" in result ? result.submissionId : "";
+      setSubmitBanner({
+        type: "success",
+        message: submittedId ? `Submitted successfully. Submission ID: ${submittedId}` : "Submitted successfully to automated flow.",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown submit error.";
+      setSubmitBanner({ type: "error", message: `Submit failed: ${message}` });
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
@@ -1211,7 +1222,6 @@ export function JobOrderFormWizard(props: {
           <h2 className="crm-title" style={{ fontSize: 24, marginBottom: 6 }}>Job Order Form</h2>
           <p className="crm-sub" style={{ margin: 0 }}>Mobile-first guided intake for field sales managers.</p>
         </div>
-        <button className="crm-btn-secondary" type="button" onClick={props.onBack}>Back to Forms</button>
       </div>
 
       <div className="order-type-badge-row" style={{ marginBottom: 10 }}>
@@ -2360,6 +2370,11 @@ export function JobOrderFormWizard(props: {
       {step === 5 ? (
         <section className="crm-card" style={{ marginBottom: 10 }}>
           <h3 className="crm-section-title">6) Review + Missing Items</h3>
+          {submitBanner ? (
+            <p className={submitBanner.type === "success" ? "crm-success" : "crm-error"} style={{ marginTop: 0, marginBottom: 10 }}>
+              {submitBanner.message}
+            </p>
+          ) : null}
           <div className="crm-card review-order-banner" style={{ marginBottom: 10, borderColor: activeTheme.uiBorder, background: activeTheme.uiSoft }}>
             <div className="snapshot-section-head">
               <h4 className="crm-section-title" style={{ fontSize: 16, marginBottom: 0 }}>Order Setup Summary</h4>

@@ -15,11 +15,9 @@ export default function App() {
     try {
       const result = await submitJobOrder(order, uploads);
       console.log("[Job Order Automated Submit]", result);
-      window.alert(`Submitted successfully to automated flow. Submission ID: ${result.submissionId}`);
+      return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown submit error.";
       console.error("[Job Order Submit Failed]", error);
-      window.alert(`Submit failed: ${message}`);
       throw error;
     }
   };
@@ -28,9 +26,7 @@ export default function App() {
     <main className="crm-page">
       <div className="crm-wrap">
         <JobOrderFormWizard
-          onBack={() => {
-            window.alert("Back to Forms is not wired in standalone mode.");
-          }}
+          onBack={() => {}}
           onSubmit={handleSubmit}
         />
       </div>
