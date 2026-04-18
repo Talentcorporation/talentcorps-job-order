@@ -8,6 +8,19 @@ function orderTypeSubjectLabel(orderType: JobOrder["orderType"]) {
   return "New Job Order";
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = String(reader.result || "");
+      const parts = raw.split(",");
+      resolve(parts.length > 1 ? parts[1] : raw);
+    };
+    reader.onerror = () => reject(new Error("Could not read generated PDF for submission."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export type GeocodeResult = {
   formattedAddress: string;
   lat: number;
@@ -61,93 +74,58 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
 
 // Standalone email draft submit for developer handoff package.
 export async function submitJobOrder(order: JobOrder, files: Record<string, File | null | undefined>) {
+  const submitUrl = String(import.meta.env.VITE_JOB_ORDER_SUBMIT_URL || "").trim();
+  if (!submitUrl) {
+    throw new Error("Missing submit endpoint. Set VITE_JOB_ORDER_SUBMIT_URL in your environment to enable automated submit.");
+  }
+
+  const generatedPdf = files.generatedPdf || null;
+  if (!generatedPdf) {
+    throw new Error("Generated PDF was not available at submit time. Click Submit again.");
+  }
+
+  const submissionId = `local-${Date.now()}`;
+  const submittedAt = new Date().toISOString();
+  const pdfBase64 = await fileToBase64(generatedPdf);
+
+  const subject = `${orderTypeSubjectLabel(order.orderType)} - ${order.twid || "No TempWorks ID"} - ${order.clientName || "Unknown Client"}`;
+
+  const payload = {
+    submissionId,
+    submittedAt,
+    to: JOB_ORDER_EMAIL_RECIPIENT,
+    fromHint: "bhunt@talentcorps.com",
+    replyToHint: "orders@talentcorps.com",
+    subject,
+    pdfFileName: generatedPdf.name || "TalentCorps_JobOrder.pdf",
+    pdfMimeType: generatedPdf.type || "application/pdf",
+    pdfBase64,
+    order,
+  };
+
+  const response = await fetch(submitUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    const suffix = details ? ` (${details.slice(0, 240)})` : "";
+    throw new Error(`Submit endpoint returned ${response.status}.${suffix}`);
+  }
+
   const attachedFiles = Object.entries(files)
     .filter(([, file]) => Boolean(file))
     .map(([key, file]) => ({ key, name: file?.name || "" }));
 
-  const laborSummary = order.laborPositions
-    .map((position, idx) => `${idx + 1}) ${position.tradeRequested || "Unspecified trade"} - ${position.workersNeeded || 0} worker(s)`)
-    .join("\n");
-
-  const subject = `${orderTypeSubjectLabel(order.orderType)} - ${order.twid || "No TempWorks ID"} - ${order.clientName || "Unknown Client"}`;
-  const payLines = [
-    `Pay Structure: ${order.financial.payStructure || "single"}`,
-    `Input Mode: ${order.financial.inputMode || "bill"}`,
-  ];
-  if (order.financial.payStructure === "single") {
-    payLines.push(
-      `Pay Rate: ${order.financial.payRate ? `$${order.financial.payRate.toFixed(2)}` : "-"}`,
-      `Bill Rate: ${order.financial.billRate ? `$${order.financial.billRate.toFixed(2)}` : "-"}`,
-      `Markup: ${order.financial.markupMultiplier || "-"}`
-    );
-  }
-  if (order.financial.payStructure === "range") {
-    payLines.push(
-      `Pay Range: ${order.financial.minPayRate ? `$${order.financial.minPayRate.toFixed(2)}` : "-"} to ${order.financial.maxPayRate ? `$${order.financial.maxPayRate.toFixed(2)}` : "-"}`,
-      `Bill Range: ${order.financial.minBillRate ? `$${order.financial.minBillRate.toFixed(2)}` : "-"} to ${order.financial.maxBillRate ? `$${order.financial.maxBillRate.toFixed(2)}` : "-"}`
-    );
-  }
-  if (order.financial.payStructure === "multiple") {
-    payLines.push(`Variable Pay Notes: ${order.financial.variablePayDescription || "-"}`);
-    (order.financial.variableRates || []).forEach((rate, idx) => {
-      payLines.push(`Rate Option ${idx + 1}: ${rate.label || "(no label)"} | Pay ${rate.payRate ? `$${rate.payRate.toFixed(2)}` : "-"} | Bill ${rate.billRate ? `$${rate.billRate.toFixed(2)}` : "-"} | Markup ${rate.markupMultiplier || "-"}`);
-    });
-  }
-  payLines.push(`PO Number: ${order.financial.poNumber || "-"}`);
-  payLines.push(`Other Compensation: ${order.otherCompensation.enabled ? (order.otherCompensation.details || "Yes") : "No"}`);
-
-  const bodyLines = [
-    "Job Order Submission",
-    "",
-    `Submission ID: local-${Date.now()}`,
-    `Created: ${new Date().toLocaleString()}`,
-    `Order Type: ${order.orderType}`,
-    `Client: ${order.clientName || "-"}`,
-    `Project: ${order.projectName || "-"}`,
-    `TWID: ${order.twid || "-"}`,
-    `Site: ${order.jobSite.formattedAddress || order.jobSite.address || "-"}`,
-    `Start Date: ${order.startDate || "-"}`,
-    `End Date: ${order.endDate || "-"}`,
-    `Shift: ${order.shiftStart || "-"} to ${order.shiftEnd || "-"}`,
-    `Schedule Days: ${order.scheduleDays.join(", ") || "-"}`,
-    "",
-    "Pay Details:",
-    ...payLines,
-    "",
-    "Copy/Paste Fields:",
-    `Order Type Choice: ${orderTypeSubjectLabel(order.orderType)}`,
-    `TempWorks ID: ${order.twid || "-"}`,
-    `Client Name: ${order.clientName || "-"}`,
-    `Project Name: ${order.projectName || "-"}`,
-    `Job Site: ${order.jobSite.formattedAddress || order.jobSite.address || "-"}`,
-    `Primary Contact: ${order.contacts.primary.name || "-"}`,
-    `Primary Email: ${order.contacts.primary.email || "-"}`,
-    `Primary Phone: ${order.contacts.primary.phone || "-"}`,
-    "",
-    "Labor Positions:",
-    laborSummary || "-",
-    "",
-    `Primary Contact: ${order.contacts.primary.name || "-"} | ${order.contacts.primary.email || "-"} | ${order.contacts.primary.phone || "-"}`,
-    `Supervisor: ${order.contacts.supervisor.name || "-"} | ${order.contacts.supervisor.email || "-"} | ${order.contacts.supervisor.phone || "-"}`,
-    `Timesheet Contact: ${order.contacts.timesheet.name || "-"} (${order.contacts.timesheet.title || "-"}) | ${order.contacts.timesheet.email || "-"} | ${order.contacts.timesheet.phone || "-"}`,
-    `General Contractor: ${order.contacts.generalContractor.name || "-"} (${order.contacts.generalContractor.title || "-"}) | ${order.contacts.generalContractor.email || "-"} | ${order.contacts.generalContractor.phone || "-"}`,
-    `Accounting Contact: ${order.contacts.accounting.name || "-"} (${order.contacts.accounting.title || "-"}) | ${order.contacts.accounting.email || "-"} | ${order.contacts.accounting.phone || "-"}`,
-    `Safety Contact: ${order.contacts.safety.name || "-"} (${order.contacts.safety.title || "-"}) | ${order.contacts.safety.email || "-"} | ${order.contacts.safety.phone || "-"}`,
-    `Other Contact: ${order.contacts.otherContact.name || "-"} (${order.contacts.otherContact.title || "-"}) | ${order.contacts.otherContact.email || "-"} | ${order.contacts.otherContact.phone || "-"}`,
-    "",
-    "File Attachments (attach manually before sending):",
-    ...attachedFiles.map((f) => `- ${f.key}: ${f.name}`),
-    ...(attachedFiles.length === 0 ? ["- None"] : []),
-  ];
-
-  const mailtoUrl = `mailto:${JOB_ORDER_EMAIL_RECIPIENT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join("\n"))}`;
-  window.location.href = mailtoUrl;
-
   return {
     ok: true,
-    submissionId: `local-${Date.now()}`,
+    submissionId,
     recipient: JOB_ORDER_EMAIL_RECIPIENT,
-    mailtoUrl,
+    submitUrl,
     received: {
       clientName: order.clientName,
       projectName: order.projectName,
