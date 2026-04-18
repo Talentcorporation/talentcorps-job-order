@@ -298,6 +298,39 @@ export function JobOrderFormWizard(props: {
   }
 
   useEffect(() => {
+    let cancelled = false;
+
+    const markReadyIfAvailable = () => {
+      if ((window as any).google?.maps?.places) {
+        if (!cancelled) {
+          setPlacesReady(true);
+          setPlacesError("");
+        }
+        return true;
+      }
+      return false;
+    };
+
+    const waitForPlaces = () => {
+      let attempts = 0;
+      const maxAttempts = 40;
+
+      const poll = () => {
+        if (cancelled) return;
+        if (markReadyIfAvailable()) return;
+
+        attempts += 1;
+        if (attempts >= maxAttempts) {
+          setPlacesReady(false);
+          setPlacesError(`Google Places script loaded but Places library was unavailable for ${window.location.hostname}. Check API enablement and referrer settings.`);
+          return;
+        }
+        window.setTimeout(poll, 150);
+      };
+
+      poll();
+    };
+
     if ((window as any).google?.maps?.places) {
       setPlacesReady(true);
       setPlacesError("");
@@ -311,40 +344,30 @@ export function JobOrderFormWizard(props: {
 
     const existing = document.querySelector('script[data-google-places="web-services-job-order"]') as HTMLScriptElement | null;
     if (existing) {
-      const onLoad = () => {
-        if ((window as any).google?.maps?.places) {
-          setPlacesReady(true);
-          setPlacesError("");
-        }
-      };
+      const onLoad = () => waitForPlaces();
       const onError = () => setPlacesError(`Google Places script failed to load for ${window.location.hostname}. Check API key and referrer restrictions.`);
       existing.addEventListener("load", onLoad, { once: true });
       existing.addEventListener("error", onError, { once: true });
-      window.setTimeout(() => {
-        if ((window as any).google?.maps?.places) {
-          setPlacesReady(true);
-          setPlacesError("");
-        }
-      }, 600);
-      return;
+      waitForPlaces();
+      return () => {
+        cancelled = true;
+      };
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(placesKey)}&libraries=places&v=weekly&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(placesKey)}&libraries=places&v=weekly`;
     script.async = true;
     script.defer = true;
     script.setAttribute("data-google-places", "web-services-job-order");
       script.onload = () => {
-      if ((window as any).google?.maps?.places) {
-        setPlacesReady(true);
-        setPlacesError("");
-      } else {
-          setPlacesReady(false);
-          setPlacesError("");
-      }
+      waitForPlaces();
     };
     script.onerror = () => setPlacesError(`Google Places script failed to load for ${window.location.hostname}. Check API key restrictions for this domain.`);
     document.body.appendChild(script);
+
+    return () => {
+      cancelled = true;
+    };
   }, [placesKey]);
 
   async function resolveAddressCandidatesFromNominatim(value: string): Promise<AddressCandidate[]> {
