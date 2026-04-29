@@ -1392,10 +1392,22 @@ export function JobOrderFormWizard(props: {
             <div className="crm-card snapshot-section">
               <h4 className="crm-section-title" style={{ fontSize: 16 }}>Assignment Schedule</h4>
               <div className="snapshot-form-grid-2">
-                <input data-field="startDate" className="crm-input" type="date" value={order.startDate || ""} onChange={(e) => updateOrder((p) => ({ ...p, startDate: e.target.value }))} />
-                <input data-field="endDate" className="crm-input" type="date" value={order.endDate || ""} onChange={(e) => updateOrder((p) => ({ ...p, endDate: e.target.value }))} />
-                <input className="crm-input" type="time" value={order.shiftStart || ""} onChange={(e) => updateOrder((p) => ({ ...p, shiftStart: e.target.value }))} />
-                <input className="crm-input" type="time" value={order.shiftEnd || ""} onChange={(e) => updateOrder((p) => ({ ...p, shiftEnd: e.target.value }))} />
+                <div>
+                  <p className="crm-sub" style={{ marginTop: 0, marginBottom: 6 }}>Start Date</p>
+                  <input data-field="startDate" className="crm-input" type="date" value={order.startDate || ""} onChange={(e) => updateOrder((p) => ({ ...p, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <p className="crm-sub" style={{ marginTop: 0, marginBottom: 6 }}>End Date</p>
+                  <input data-field="endDate" className="crm-input" type="date" value={order.endDate || ""} onChange={(e) => updateOrder((p) => ({ ...p, endDate: e.target.value }))} />
+                </div>
+                <div>
+                  <p className="crm-sub" style={{ marginTop: 0, marginBottom: 6 }}>Start Time</p>
+                  <input className="crm-input" type="time" value={order.shiftStart || ""} onChange={(e) => updateOrder((p) => ({ ...p, shiftStart: e.target.value }))} />
+                </div>
+                <div>
+                  <p className="crm-sub" style={{ marginTop: 0, marginBottom: 6 }}>End Time</p>
+                  <input className="crm-input" type="time" value={order.shiftEnd || ""} onChange={(e) => updateOrder((p) => ({ ...p, shiftEnd: e.target.value }))} />
+                </div>
                 <label className="crm-row snapshot-full" style={{ gap: 8, marginTop: 2 }}>
                   <input
                     data-field="isLongTermProject"
