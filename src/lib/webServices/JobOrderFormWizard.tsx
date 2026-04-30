@@ -54,6 +54,15 @@ type NominatimResult = {
 
 const STEP_LABELS = ["Snapshot", "Contacts", "Labor", "Pay", "Compliance", "Review"] as const;
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const SALES_TEAM_MEMBER_OPTIONS = String(import.meta.env.VITE_SALES_TEAM_MEMBERS || "Brandon Hunt")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+type SubmitConfirmationItem = {
+  key: string;
+  label: string;
+};
 
 function stepForField(field: string): number {
   if (field === "scheduleDays" || field === "shiftTypes") return 0;
@@ -199,6 +208,8 @@ export function JobOrderFormWizard(props: {
   const [deviceLocation, setDeviceLocation] = useState<DeviceLocation | null>(null);
   const [jobSiteQuery, setJobSiteQuery] = useState("");
   const [submitBanner, setSubmitBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [submitConfirmationChecks, setSubmitConfirmationChecks] = useState<Record<string, boolean>>({});
 
   const addressInputRef = useRef<HTMLInputElement | null>(null);
   const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -222,6 +233,53 @@ export function JobOrderFormWizard(props: {
   const computedBill = pay > 0 && markup > 0 ? pay * markup : 0;
   const activeTheme = useMemo(() => orderTypeTheme(order.orderType), [order.orderType]);
   const requestTypeBadge = useMemo(() => orderTypeBadgeText(order.orderType), [order.orderType]);
+  const salesTeamMemberOptions = useMemo(() => {
+    const next = [...SALES_TEAM_MEMBER_OPTIONS];
+    const selected = String(order.internal.salesTeamMember || "").trim();
+    if (selected && !next.includes(selected)) next.unshift(selected);
+    return next;
+  }, [order.internal.salesTeamMember]);
+  const submitConfirmationItems = useMemo<SubmitConfirmationItem[]>(() => {
+    const items: SubmitConfirmationItem[] = [];
+    if (!String(order.financial.poNumber || "").trim()) {
+      items.push({
+        key: "poNumber",
+        label: "I have verified that a pruchase order is not required on this site.",
+      });
+    }
+    if (!order.onboarding.drugScreenRequired) {
+      items.push({
+        key: "drugScreenRequired",
+        label: "I have verified that a drug screen is not required on this site.",
+      });
+    }
+    if (!order.onboarding.backgroundRequired) {
+      items.push({
+        key: "backgroundRequired",
+        label: "I have verified that a background check is not required on this site.",
+      });
+    }
+    if (!order.compliance.cipWrap.enabled) {
+      items.push({
+        key: "cipWrap",
+        label: "I have verified that CIP / Wrap is not required on this site.",
+      });
+    }
+    if (!order.compliance.prevailingWage.enabled) {
+      items.push({
+        key: "prevailingWage",
+        label: "I have verified that prevailing wage is not required on this site.",
+      });
+    }
+    return items;
+  }, [
+    order.financial.poNumber,
+    order.onboarding.drugScreenRequired,
+    order.onboarding.backgroundRequired,
+    order.compliance.cipWrap.enabled,
+    order.compliance.prevailingWage.enabled,
+  ]);
+  const submitConfirmationReady = submitConfirmationItems.every((item) => Boolean(submitConfirmationChecks[item.key]));
   const hasTimesheetValues = Boolean(
     order.contacts.timesheet.name?.trim() ||
     order.contacts.timesheet.title?.trim() ||
@@ -263,6 +321,19 @@ export function JobOrderFormWizard(props: {
       setJobSiteQuery(order.jobSite.formattedAddress);
     }
   }, [jobSiteQuery, order.jobSite.formattedAddress]);
+
+  useEffect(() => {
+    setSubmitConfirmationChecks((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const item of submitConfirmationItems) {
+        next[item.key] = prev[item.key] ?? false;
+      }
+      return next;
+    });
+    if (submitConfirmationItems.length === 0) {
+      setShowSubmitConfirmation(false);
+    }
+  }, [submitConfirmationItems]);
 
   const updatePosition = (index: number, updater: (current: LaborPosition) => LaborPosition) => {
     updateOrder((prev) => ({
@@ -737,7 +808,7 @@ export function JobOrderFormWizard(props: {
     }, 80);
   }
 
-  async function handleSubmit() {
+  async function runSubmit() {
     if (blockingErrors.length > 0) {
       setStep(5);
       return;
@@ -787,6 +858,27 @@ export function JobOrderFormWizard(props: {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleSubmit() {
+    if (blockingErrors.length > 0) {
+      setStep(5);
+      return;
+    }
+    if (submitConfirmationItems.length > 0 && !submitConfirmationReady) {
+      setShowSubmitConfirmation(true);
+      return;
+    }
+    await runSubmit();
+  }
+
+  async function handleSubmitFromConfirmation() {
+    if (!submitConfirmationReady) {
+      setSubmitBanner({ type: "error", message: "Please check all required confirmations before submitting." });
+      return;
+    }
+    setShowSubmitConfirmation(false);
+    await runSubmit();
   }
 
   async function generateLocalPdfUrl(nextOrder: JobOrder): Promise<string> {
@@ -2196,7 +2288,17 @@ export function JobOrderFormWizard(props: {
             <div className="crm-card pay-section">
               <h4 className="crm-section-title" style={{ fontSize: 16 }}>Internal Assignment</h4>
               <div className="pay-rates-grid">
-                <input data-field="internal.salesTeamMember" className="crm-input" placeholder="Sales Team Member" value={order.internal.salesTeamMember} onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, salesTeamMember: e.target.value } }))} />
+                <select
+                  data-field="internal.salesTeamMember"
+                  className="crm-input"
+                  value={order.internal.salesTeamMember}
+                  onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, salesTeamMember: e.target.value } }))}
+                >
+                  <option value="">Select Sales Team Member</option>
+                  {salesTeamMemberOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
                 <input data-field="internal.branch" className="crm-input" placeholder="Branch" value={order.internal.branch} onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, branch: e.target.value } }))} />
                 <textarea className="crm-input pay-full" rows={2} placeholder="Internal Notes" value={order.internal.notes || ""} onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, notes: e.target.value } }))} />
               </div>
@@ -2449,6 +2551,37 @@ export function JobOrderFormWizard(props: {
           </div>
             {pdfError ? <p className="crm-error" style={{ marginTop: 8 }}>{pdfError}</p> : null}
         </section>
+      ) : null}
+
+      {showSubmitConfirmation ? (
+        <div className="crm-modal-backdrop" role="dialog" aria-modal="true" aria-label="Submission confirmations">
+          <div className="crm-modal-card">
+            <h4 className="crm-section-title" style={{ fontSize: 16, marginBottom: 6 }}>Confirm Before Submit</h4>
+            <p className="crm-sub" style={{ marginTop: 0, marginBottom: 10 }}>
+              Please review and confirm each item below before submitting this job order.
+            </p>
+            <div className="crm-grid" style={{ gap: 8 }}>
+              {submitConfirmationItems.map((item) => (
+                <label key={item.key} className="crm-modal-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(submitConfirmationChecks[item.key])}
+                    onChange={(e) => setSubmitConfirmationChecks((prev) => ({ ...prev, [item.key]: e.target.checked }))}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="crm-row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+              <button className="crm-btn-secondary" type="button" onClick={() => setShowSubmitConfirmation(false)} disabled={isSubmitting}>
+                Cancel
+              </button>
+              <button className="crm-btn-primary" type="button" onClick={handleSubmitFromConfirmation} disabled={!submitConfirmationReady || isSubmitting}>
+                {isSubmitting ? "Submitting..." : "OK and Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <div className="crm-row" style={{ justifyContent: "space-between", marginTop: 10 }}>

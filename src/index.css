@@ -288,6 +288,40 @@ html, body {
   font-size: 13px;
 }
 
+.crm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 12000;
+}
+
+.crm-modal-card {
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.28);
+  padding: 14px;
+}
+
+.crm-modal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--secondary-border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: var(--secondary-bg);
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
 .crm-section-title {
   margin: 0 0 8px;
   font-size: 13px;
