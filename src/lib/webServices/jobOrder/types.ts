@@ -256,7 +256,7 @@ export function createEmptyJobOrder(): JobOrder {
       },
     },
     internal: {
-      salesTeamMember: "",
+      salesTeamMember: "House Account",
       branch: "",
       notes: "",
     },

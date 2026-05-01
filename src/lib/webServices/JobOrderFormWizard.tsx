@@ -55,6 +55,7 @@ type NominatimResult = {
 const STEP_LABELS = ["Snapshot", "Contacts", "Labor", "Pay", "Compliance", "Review"] as const;
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SALES_TEAM_MEMBER_OPTIONS = [
+  "House Account",
   "Bertha Quiroga Copado",
   "Jack Trischett",
   "Yvette Quintana",
