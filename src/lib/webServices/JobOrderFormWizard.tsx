@@ -54,10 +54,25 @@ type NominatimResult = {
 
 const STEP_LABELS = ["Snapshot", "Contacts", "Labor", "Pay", "Compliance", "Review"] as const;
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const SALES_TEAM_MEMBER_OPTIONS = String(import.meta.env.VITE_SALES_TEAM_MEMBERS || "Brandon Hunt")
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
+const SALES_TEAM_MEMBER_OPTIONS = [
+  "Bertha Quiroga Copado",
+  "Jack Trischett",
+  "Yvette Quintana",
+  "Vincent Chernushin",
+  "Scott Olson",
+  "Mitchell Cummings",
+  "Chad Gibson",
+  "Jared Schock",
+  "Kevin O'Banyoun",
+  "Kelly Smith",
+  "Eric Stegman",
+  "Cameron Mecca",
+  "Kim Higbie",
+  "Livan Macanlalay",
+  "Megan Waters",
+  "Rebekah Guillory",
+  "Kevin Owens",
+];
 
 type SubmitConfirmationItem = {
   key: string;
