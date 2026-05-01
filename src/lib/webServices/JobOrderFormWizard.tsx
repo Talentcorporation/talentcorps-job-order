@@ -74,6 +74,23 @@ const SALES_TEAM_MEMBER_OPTIONS = [
   "Rebekah Guillory",
   "Kevin Owens",
 ];
+const BRANCH_OPTIONS = [
+  "Atlanta",
+  "Austin",
+  "Charlotte",
+  "Dallas/Fort Worth",
+  "DC MEtroplex",
+  "DFW LIT Direct Placements",
+  "Houston",
+  "Nashville",
+  "National",
+  "Orlando",
+  "Philiadelphia",
+  "Phoenix",
+  "San Antonio",
+  "Strategic Accounts",
+  "Tampa",
+];
 
 type SubmitConfirmationItem = {
   key: string;
@@ -2315,7 +2332,17 @@ export function JobOrderFormWizard(props: {
                     <option key={name} value={name}>{name}</option>
                   ))}
                 </select>
-                <input data-field="internal.branch" className="crm-input" placeholder="Branch" value={order.internal.branch} onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, branch: e.target.value } }))} />
+                <select
+                  data-field="internal.branch"
+                  className="crm-input"
+                  value={order.internal.branch}
+                  onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, branch: e.target.value } }))}
+                >
+                  <option value="">Select Branch</option>
+                  {BRANCH_OPTIONS.map((branch) => (
+                    <option key={branch} value={branch}>{branch}</option>
+                  ))}
+                </select>
                 <textarea className="crm-input pay-full" rows={2} placeholder="Internal Notes" value={order.internal.notes || ""} onChange={(e) => updateOrder((p) => ({ ...p, internal: { ...p.internal, notes: e.target.value } }))} />
               </div>
             </div>
