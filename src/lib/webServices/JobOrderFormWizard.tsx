@@ -1058,6 +1058,71 @@ export function JobOrderFormWizard(props: {
       return raw.length > max ? `${raw.slice(0, max - 1)}...` : raw;
     };
 
+    const wrapText = (text: string, maxChars = 92) => {
+      const clean = String(text || "").replace(/\r\n/g, "\n");
+      const paragraphs = clean.split("\n");
+      const lines: string[] = [];
+      for (const paragraph of paragraphs) {
+        const words = paragraph.split(/\s+/).filter(Boolean);
+        if (words.length === 0) {
+          lines.push("");
+          continue;
+        }
+        let current = "";
+        for (const word of words) {
+          const next = current ? `${current} ${word}` : word;
+          if (next.length > maxChars) {
+            if (current) lines.push(current);
+            current = word;
+          } else {
+            current = next;
+          }
+        }
+        if (current) lines.push(current);
+      }
+      return lines;
+    };
+
+    const drawTextAttachment = (title: string, body: string) => {
+      const lines = wrapText(body || "-", 94);
+      const ensureSpace = (needed: number) => {
+        if (y - needed < 42) {
+          page = pdf.addPage([612, 792]);
+          y = 758;
+        }
+      };
+
+      ensureSpace(52);
+      page.drawRectangle({
+        x: margin,
+        y: y - 26,
+        width: pageWidth - margin * 2,
+        height: 22,
+        color: pdfTheme.pdfSectionHead,
+      });
+      page.drawText(title, {
+        x: margin + 10,
+        y: y - 18,
+        size: 11,
+        font: bold,
+        color: rgb(1, 1, 1),
+      });
+      y -= 34;
+
+      for (const line of lines) {
+        ensureSpace(16);
+        page.drawText(line || " ", {
+          x: margin + 4,
+          y,
+          size: 10,
+          font,
+          color: rgb(0.15, 0.2, 0.3),
+        });
+        y -= 13;
+      }
+      y -= 8;
+    };
+
     drawSection("Order Setup", [
       ["Request Type", pdfRequestTypeLabel],
       ["Request Badge", pdfRequestTypeBadge],
@@ -1092,12 +1157,21 @@ export function JobOrderFormWizard(props: {
       ["Other Contact", fit(`${nextOrder.contacts.otherContact.name || "-"} (${nextOrder.contacts.otherContact.title || "-"}) | ${nextOrder.contacts.otherContact.email || "-"}`)],
     ]);
 
+    const longJobDescriptionAttachments: Array<{ title: string; body: string }> = [];
     nextOrder.laborPositions.forEach((position, index) => {
+      const fullDescription = String(position.jobDescription || "").trim();
+      const descriptionTooLong = fullDescription.length > 160;
+      if (descriptionTooLong) {
+        longJobDescriptionAttachments.push({
+          title: `Attachment: Position ${index + 1} Full Job Description`,
+          body: fullDescription,
+        });
+      }
       drawSection(`Position ${index + 1}`, [
         ["Trade", position.tradeRequested || "-"],
         ["Workers Needed", String(position.workersNeeded || "-")],
         ["Language", position.languagePreference || "-"],
-        ["Job Description", fit(position.jobDescription || "-")],
+        ["Job Description", descriptionTooLong ? `Attached - see Position ${index + 1} appendix` : fit(position.jobDescription || "-")],
         ["Requirements", fit(position.requirements || "-")],
         ["Certificates/Safety", fit(position.certificates || "-")],
         ["Submittal Process", fit(position.submittalProcess || "-")],
@@ -1135,10 +1209,17 @@ export function JobOrderFormWizard(props: {
     }
     financialRows.push(
       ["Per Diem", nextOrder.perDiem.enabled ? `Yes ($${nextOrder.perDiem.amount || 0})` : "No"],
+      ["Per Diem Notes", fit(nextOrder.perDiem.details || "-")],
       ["Travel Pay", nextOrder.travelPay.enabled ? `Yes ($${nextOrder.travelPay.amount || 0})` : "No"],
       ["Other", nextOrder.otherCompensation.enabled ? fit(nextOrder.otherCompensation.details || "Yes") : "No"]
     );
     drawSection("Rates & Conditions", financialRows);
+
+    if (longJobDescriptionAttachments.length > 0) {
+      for (const attachment of longJobDescriptionAttachments) {
+        drawTextAttachment(attachment.title, attachment.body);
+      }
+    }
 
     drawSection("Compliance & Onboarding", [
       ["CIP / Wrap", nextOrder.compliance.cipWrap.enabled ? "Yes" : "No"],
@@ -2291,10 +2372,21 @@ export function JobOrderFormWizard(props: {
               <div className="crm-card" style={{ padding: 10 }}>
                 <label className="crm-row" style={{ gap: 8 }}><input type="checkbox" checked={order.perDiem.enabled} onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, enabled: e.target.checked } }))} /> Per Diem Applies</label>
                 {order.perDiem.enabled ? (
-                  <div className="pay-rates-grid" style={{ marginTop: 8 }}>
-                    <input data-field="perDiem.amount" className="crm-input" type="number" step="0.01" placeholder="Per Diem Amount" value={order.perDiem.amount ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, amount: Number(e.target.value || 0) || null } }))} />
-                    <input data-field="perDiem.days" className="crm-input" type="number" placeholder="Days Paid" value={order.perDiem.days ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, days: Number(e.target.value || 0) || null } }))} />
-                  </div>
+                  <>
+                    <div className="pay-rates-grid" style={{ marginTop: 8 }}>
+                      <input data-field="perDiem.amount" className="crm-input" type="number" step="0.01" placeholder="Per Diem Amount" value={order.perDiem.amount ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, amount: Number(e.target.value || 0) || null } }))} />
+                      <input data-field="perDiem.days" className="crm-input" type="number" placeholder="Days Paid" value={order.perDiem.days ?? ""} onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, days: Number(e.target.value || 0) || null } }))} />
+                    </div>
+                    <textarea
+                      data-field="perDiem.details"
+                      className="crm-input"
+                      rows={2}
+                      style={{ marginTop: 8 }}
+                      placeholder="Per Diem Notes"
+                      value={order.perDiem.details || ""}
+                      onChange={(e) => updateOrder((p) => ({ ...p, perDiem: { ...p.perDiem, details: e.target.value } }))}
+                    />
+                  </>
                 ) : null}
               </div>
 
