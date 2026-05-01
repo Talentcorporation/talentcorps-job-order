@@ -861,7 +861,7 @@ export function JobOrderFormWizard(props: {
         .replace(/^_+|_+$/g, "")
         .slice(0, 24) || "no_twid";
 
-      const localPdfUrl = await generateLocalPdfUrl(order);
+      const localPdfUrl = await generateLocalPdfUrl(order, uploads);
       const localPdfBlob = await fetch(localPdfUrl).then((res) => res.blob());
       const generatedPdf = new File(
         [localPdfBlob],
@@ -914,7 +914,7 @@ export function JobOrderFormWizard(props: {
     await runSubmit();
   }
 
-  async function generateLocalPdfUrl(nextOrder: JobOrder): Promise<string> {
+  async function generateLocalPdfUrl(nextOrder: JobOrder, nextUploads?: UploadState): Promise<string> {
     const pdfTheme = orderTypeTheme(nextOrder.orderType);
     const pdfRequestTypeLabel = orderTypeLabel(nextOrder.orderType);
     const pdfRequestTypeBadge = orderTypeBadgeText(nextOrder.orderType);
@@ -1221,6 +1221,112 @@ export function JobOrderFormWizard(props: {
       }
     }
 
+    const filesToAppend = Object.entries(nextUploads || {})
+      .filter(([key, file]) => key !== "generatedPdf" && Boolean(file))
+      .map(([key, file]) => ({ key, file: file as File }));
+
+    const unsupportedAttachments: string[] = [];
+    const imageExtensions = [".png", ".jpg", ".jpeg"];
+    const imageMimeTypes = ["image/png", "image/jpeg", "image/jpg"];
+    const isPdfFile = (file: File) => {
+      const lower = String(file.name || "").toLowerCase();
+      return file.type === "application/pdf" || lower.endsWith(".pdf");
+    };
+    const isImageFile = (file: File) => {
+      const lower = String(file.name || "").toLowerCase();
+      return imageMimeTypes.includes(file.type) || imageExtensions.some((ext) => lower.endsWith(ext));
+    };
+
+    const drawAttachmentHeading = (title: string) => {
+      page = pdf.addPage([612, 792]);
+      y = 758;
+      page.drawRectangle({
+        x: margin,
+        y: y - 30,
+        width: pageWidth - margin * 2,
+        height: 24,
+        color: pdfTheme.pdfSectionHead,
+      });
+      page.drawText(title, {
+        x: margin + 10,
+        y: y - 21,
+        size: 11,
+        font: bold,
+        color: rgb(1, 1, 1),
+      });
+    };
+
+    const appendImageAttachment = async (file: File, title: string) => {
+      const bytes = await file.arrayBuffer();
+      const lower = String(file.name || "").toLowerCase();
+      const isPng = file.type === "image/png" || lower.endsWith(".png");
+      const image = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+
+      drawAttachmentHeading(title);
+
+      const drawWidthMax = pageWidth - margin * 2 - 20;
+      const drawHeightMax = 700;
+      const scale = Math.min(drawWidthMax / image.width, drawHeightMax / image.height);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const drawX = margin + (pageWidth - margin * 2 - drawWidth) / 2;
+      const drawY = 24 + (drawHeightMax - drawHeight) / 2;
+
+      page.drawImage(image, {
+        x: drawX,
+        y: drawY,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    };
+
+    const appendPdfAttachment = async (file: File, title: string) => {
+      const bytes = await file.arrayBuffer();
+      const attachmentPdf = await PDFDocument.load(bytes);
+      const pageIndices = attachmentPdf.getPageIndices();
+      if (pageIndices.length === 0) return;
+      const copied = await pdf.copyPages(attachmentPdf, pageIndices);
+      copied.forEach((copiedPage, index) => {
+        if (index === 0) {
+          drawAttachmentHeading(title);
+          page.drawText("Attached PDF begins below.", {
+            x: margin + 10,
+            y: y - 44,
+            size: 9,
+            font,
+            color: rgb(0.22, 0.28, 0.38),
+          });
+        }
+        pdf.addPage(copiedPage);
+      });
+      page = pdf.getPages()[pdf.getPageCount() - 1];
+      y = 758;
+    };
+
+    for (const { file, key } of filesToAppend) {
+      const label = file.name || key;
+      try {
+        if (isPdfFile(file)) {
+          await appendPdfAttachment(file, `Attachment: ${label}`);
+          continue;
+        }
+        if (isImageFile(file)) {
+          await appendImageAttachment(file, `Attachment: ${label}`);
+          continue;
+        }
+        unsupportedAttachments.push(label);
+      } catch {
+        unsupportedAttachments.push(label);
+      }
+    }
+
+    if (unsupportedAttachments.length > 0) {
+      drawTextAttachment(
+        "Attachment Note",
+        `The following uploaded files were not appended to this PDF because their formats are not directly supported in-browser: ${unsupportedAttachments.join(", ")}.`
+      );
+    }
+
     drawSection("Compliance & Onboarding", [
       ["CIP / Wrap", nextOrder.compliance.cipWrap.enabled ? "Yes" : "No"],
       [
@@ -1355,7 +1461,7 @@ export function JobOrderFormWizard(props: {
     setIsGeneratingPdf(true);
     try {
       try {
-        const localUrl = await generateLocalPdfUrl(order);
+        const localUrl = await generateLocalPdfUrl(order, uploads);
         if (pdfResultMode === "local" && pdfResultUrl.startsWith("blob:")) URL.revokeObjectURL(pdfResultUrl);
         setPdfResultMode("local");
         setPdfResultUrl(localUrl);
