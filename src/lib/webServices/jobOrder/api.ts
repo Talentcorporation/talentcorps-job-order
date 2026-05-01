@@ -73,7 +73,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
   });
 }
 
-// Standalone email draft submit for developer handoff package.
+// Standalone submit to Power Automate endpoint.
 export async function submitJobOrder(order: JobOrder, files: Record<string, File | null | undefined>) {
   const submitUrl = String(import.meta.env.VITE_JOB_ORDER_SUBMIT_URL || "").trim();
   if (!submitUrl) {
@@ -88,28 +88,17 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
   const submissionId = `local-${Date.now()}`;
   const submittedAt = new Date().toISOString();
   const pdfBase64 = await fileToBase64(generatedPdf);
+  const pdfFileName = generatedPdf.name || "TalentCorps_JobOrder.pdf";
+  const pdfMimeType = generatedPdf.type || "application/pdf";
 
   const subject = `${orderTypeSubjectLabel(order.orderType)} - ${order.twid || "No TempWorks ID"} - ${order.clientName || "Unknown Client"}`;
-
-  const payload = {
-    submissionId,
-    submittedAt,
-    to: JOB_ORDER_EMAIL_RECIPIENT,
-    fromHint: "bhunt@talentcorps.com",
-    replyToHint: "orders@talentcorps.com",
-    subject,
-    pdfFileName: generatedPdf.name || "TalentCorps_JobOrder.pdf",
-    pdfMimeType: generatedPdf.type || "application/pdf",
-    pdfBase64,
-    order,
-  };
 
   const exportPayload = buildJobOrderExportPayload(order, {
     submissionId,
     submittedAt,
     subject,
-    pdfFileName: payload.pdfFileName,
-    pdfMimeType: payload.pdfMimeType,
+    pdfFileName,
+    pdfMimeType,
     pdfBase64,
     payloadVersion: "v1",
     submitStatus: "Submitted",
@@ -117,19 +106,12 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     pdfStorageUrl: "",
   });
 
-  const submitPayload = {
-    ...payload,
-    ...exportPayload,
-    emailBodyJson: JSON.stringify(exportPayload),
-    emailBodyPayload: exportPayload,
-  };
-
   const response = await fetch(submitUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(submitPayload),
+    body: JSON.stringify(exportPayload),
   });
 
   if (!response.ok) {
