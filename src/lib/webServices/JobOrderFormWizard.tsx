@@ -882,7 +882,7 @@ export function JobOrderFormWizard(props: {
       const submittedId = result && typeof result === "object" && "submissionId" in result ? result.submissionId : "";
       setSubmitBanner({
         type: "success",
-        message: submittedId ? `Submitted successfully. Submission ID: ${submittedId}` : "Submitted successfully to automated flow.",
+        message: submittedId ? `Submission accepted by automated flow. Submission ID: ${submittedId}` : "Submission accepted by automated flow.",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown submit error.";
@@ -1136,6 +1136,12 @@ export function JobOrderFormWizard(props: {
       ["Project", nextOrder.projectName || "-"],
       ["TWID", nextOrder.twid || "-"],
       ["Position Count", String(nextOrder.laborPositions.length || 0)],
+    ]);
+
+    drawSection("Internal Assignment", [
+      ["Sales Team Member", nextOrder.internal.salesTeamMember || "-"],
+      ["Branch", nextOrder.internal.branch || "-"],
+      ["Internal Notes", fit(nextOrder.internal.notes || "-")],
     ]);
 
     drawSection("Scheduling", [

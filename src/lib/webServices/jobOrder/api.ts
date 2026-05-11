@@ -97,6 +97,7 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     submissionId,
     submittedAt,
     subject,
+    recipientEmail: JOB_ORDER_EMAIL_RECIPIENT,
     pdfFileName,
     pdfMimeType,
     pdfBase64,
@@ -110,6 +111,7 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Accept": "application/json, text/plain;q=0.9, */*;q=0.8",
     },
     body: JSON.stringify(exportPayload),
   });
@@ -118,6 +120,38 @@ export async function submitJobOrder(order: JobOrder, files: Record<string, File
     const details = await response.text().catch(() => "");
     const suffix = details ? ` (${details.slice(0, 240)})` : "";
     throw new Error(`Submit endpoint returned ${response.status}.${suffix}`);
+  }
+
+  let responseBody: any = null;
+  const responseContentType = String(response.headers.get("content-type") || "").toLowerCase();
+  if (responseContentType.includes("application/json")) {
+    responseBody = await response.json().catch(() => null);
+  } else {
+    const text = await response.text().catch(() => "");
+    if (text) {
+      try {
+        responseBody = JSON.parse(text);
+      } catch {
+        responseBody = { message: text };
+      }
+    }
+  }
+
+  const explicitFailure =
+    responseBody &&
+    typeof responseBody === "object" &&
+    (
+      responseBody.ok === false ||
+      responseBody.success === false ||
+      responseBody.emailSent === false ||
+      responseBody.sent === false ||
+      String(responseBody.status || "").toLowerCase() === "failed" ||
+      String(responseBody.status || "").toLowerCase() === "error"
+    );
+
+  if (explicitFailure) {
+    const bodyMessage = String(responseBody.message || responseBody.error || "").trim();
+    throw new Error(bodyMessage || "Submit endpoint reported a failure while processing email delivery.");
   }
 
   const attachedFiles = Object.entries(files)
