@@ -1190,6 +1190,7 @@ export function JobOrderFormWizard(props: {
     const financialRows: Array<[string, string]> = [
       ["Pay Structure", nextOrder.financial.payStructure || "single"],
       ["Input Mode", nextOrder.financial.inputMode || "bill"],
+      ["PO #", nextOrder.financial.poNumber || "-"],
     ];
     if (nextOrder.financial.payStructure === "single") {
       financialRows.push(
